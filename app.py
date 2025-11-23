@@ -31,19 +31,19 @@ def list_subjects():
             return '<h1>No subjects found.</h1><p><a href="/create-db">Create database first</a></p>'
         
         html = '<h1>All Subjects</h1>'
-        html += '<p><a href="/add-subject" style="background: grey; color: white; padding: 10px; text-decoration: none; border-radius: 5px;">+ Add New Subject</a></p>'
-        html += '<table border="1" style="border-collapse: collapse; width: 100%; margin: 20px 0;">'
-        html += '<tr style="background-color: #f2f2f2;"><th>ID</th><th>Code</th><th>Subject Name</th><th>Credit Hours</th><th>Actions</th></tr>'
+        html += '<p><a href="/add-subject" >+ Add New Subject</a></p>'
+        html += '<table border="1">'
+        html += '<tr><th>ID</th><th>Code</th><th>Subject Name</th><th>Credit Hours</th><th>Actions</th></tr>'
         
         for subject in subjects:
             html += f'<tr>'
-            html += f'<td style="padding: 8px; text-align: center;">{subject["subject_id"]}</td>'
-            html += f'<td style="padding: 8px;">{subject["subject_code"]}</td>'
-            html += f'<td style="padding: 8px;">{subject["subject_name"]}</td>'
-            html += f'<td style="padding: 8px; text-align: center;">{subject["credit_hours"]}</td>'
-            html += f'<td style="padding: 8px; text-align: center;">'
-            html += f'<a href="/edit-subject/{subject["subject_id"]}" style="background: grey; color: white; padding: 5px 10px; text-decoration: none; border-radius: 3px; margin: 0 5px;">Edit</a>'
-            html += f'<a href="/delete-subject/{subject["subject_id"]}" style="background: grey; color: white; padding: 5px 10px; text-decoration: none; border-radius: 3px; margin: 0 5px;" onclick="return confirm(\'Are you sure you want to delete this subject?\')">Delete</a>'
+            html += f'<td>{subject["subject_id"]}</td>'
+            html += f'<td>{subject["subject_code"]}</td>'
+            html += f'<td>{subject["subject_name"]}</td>'
+            html += f'<td>{subject["credit_hours"]}</td>'
+            html += f'<td>'
+            html += f'<a href="/edit-subject/{subject["subject_id"]}" style="border-radius: 3px; margin: 0 5px;">Edit</a>'
+            html += f'<a href="/delete-subject/{subject["subject_id"]}" style="border-radius: 3px; margin: 0 5px;" onclick="return confirm(\'Are you sure you want to delete this subject?\')">Delete</a>'
             html += f'</td>'
             html += f'</tr>'
         
@@ -90,7 +90,7 @@ def add_subject():
             <input type="number" id="credit_hours" name="credit_hours" value="3" min="1" max="6" style="width: 100%; padding: 8px; margin: 5px 0;">
         </div>
         <div style="margin: 10px 0;">
-            <input type="submit" value="Add Subject" style="background: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+            <input type="submit" value="Add Subject" style="padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
             <a href="/subjects" style="background: #ccc; color: black; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-left: 10px;">Cancel</a>
         </div>
     </form>
@@ -118,7 +118,6 @@ def edit_subject(subject_id):
             conn.close()
             return f'<h1>Error updating subject: {str(e)}</h1><p><a href="/edit-subject/{subject_id}">Try again</a></p>'
     
-    # GET request - show the form with current data
     subject = conn.execute('SELECT * FROM subjects WHERE subject_id = ?', (subject_id,)).fetchone()
     conn.close()
     
@@ -164,7 +163,7 @@ def create_database_route():
         import Databases.database
         Databases.database.create_database()
         return '''
-        <h1>Database created successfully! ✅</h1>
+        <h1>Database created successfully!</h1>
         <p><a href="/subjects">View Subjects</a></p>
         <p><a href="/">Back to Home</a></p>
         '''
