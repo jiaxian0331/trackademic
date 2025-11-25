@@ -5,18 +5,19 @@ import os
 app = Flask(__name__)
 
 def get_db_connection():
-    conn = sqlite3.connect('school_subjects.db')
+    conn = sqlite3.connect('trackademic.db')
     conn.row_factory = sqlite3.Row
     return conn
 
 @app.route('/')
 def home():
     return '''
-    <h1>Subjects Database</h1>
+    <h1>Trackademic Database</h1>
     <ul>
         <li><a href="/subjects">View All Subjects</a></li>
-        <li><a href="/add-subject">Add New Subject</a></li>
-        <li><a href="/create-db">Create/Reset Database</a></li>
+        <li><a href="/user">View All Users</a></li>
+        <li><a href="/create-subjects-db">Reset Subjects Database</a></li>
+        <li><a href="/create-user-db">Reset User Database</a></li>
     </ul>
     '''
 
@@ -28,7 +29,7 @@ def list_subjects():
         conn.close()
         
         if not subjects:
-            return '<h1>No subjects found.</h1><p><a href="/create-db">Create database first</a></p>'
+            return '<h1>No subjects found.</h1><p><a href="/create-subjects-db">Create database first</a></p>'
         
         html = '<h1>All Subjects</h1>'
         html += '<p><a href="/add-subject" >+ Add New Subject</a></p>'
@@ -71,7 +72,7 @@ def add_subject():
             conn.close()
             return redirect('/subjects')
         except Exception as e:
-            return f'<h1>Error adding subject: {str(e)}</h1><p><a href="/add-subject">Try again</a></p>'
+            return f'<h1>Failed to add subject: Subject already existed.</h1><p><a href="/add-subject">Try again</a></p>'
     
     # GET request - show the form
     return '''
@@ -101,7 +102,6 @@ def edit_subject(subject_id):
     conn = get_db_connection()
     
     if request.method == 'POST':
-        # Update the subject
         subject_name = request.form['subject_name']
         subject_code = request.form['subject_code']
         credit_hours = request.form['credit_hours']
@@ -116,7 +116,7 @@ def edit_subject(subject_id):
             return redirect('/subjects')
         except Exception as e:
             conn.close()
-            return f'<h1>Error updating subject: {str(e)}</h1><p><a href="/edit-subject/{subject_id}">Try again</a></p>'
+            return f'<h1>Error updating subject!</h1><p><a href="/edit-subject/{subject_id}">Try again</a></p>'
     
     subject = conn.execute('SELECT * FROM subjects WHERE subject_id = ?', (subject_id,)).fetchone()
     conn.close()
@@ -153,22 +153,76 @@ def delete_subject(subject_id):
         conn.execute('DELETE FROM subjects WHERE subject_id = ?', (subject_id,))
         conn.commit()
         conn.close()
-        return redirect('/subjects')
+        return f'<h1>Subject deleted successfully!</h1><p><a href="/subjects">Back to subjects</a></p>'
     except Exception as e:
-        return f'<h1>Error deleting subject: {str(e)}</h1><p><a href="/subjects">Back to subjects</a></p>'
-
-@app.route('/create-db')
-def create_database_route():
+        return f'<h1>Error deleting subject!</h1><p><a href="/subjects">Back to subjects</a></p>'
+    
+@app.route('/user')
+def list_user():
     try:
-        import Databases.database
-        Databases.database.create_database()
+        conn = get_db_connection()
+        user = conn.execute('SELECT * FROM user_data ORDER BY user_id').fetchall()
+        conn.close()
+        
+        if not user:
+            return '<h1>No user found.</h1><p><a href="/create-user-db">Create database first</a></p>'
+        
+        html = '<h1>All Users</h1>'
+        html += '<table border="1">'
+        html += '<tr><th>ID</th><th>Username</th><th>Email</th><th>Password</th><th>Actions</th></tr>'
+        
+        for users in user:
+            html += f'<tr>'
+            html += f'<td>{users["user_id"]}</td>'
+            html += f'<td>{users["username"]}</td>'
+            html += f'<td>{users["email"]}</td>'
+            html += f'<td>{users["password"]}</td>'
+            html += f'<td>'
+            html += f'<a href="/delete-user/{users["user_id"]}" style="border-radius: 3px; margin: 0 5px;" onclick="return confirm(\'Are you sure you want to delete this user?\')">Delete</a>'
+            html += f'</td>'
+            html += f'</tr>'
+        
+        html += '</table>'
+        html += '<p><a href="/">Back to Home</a></p>'
+        return html
+    except Exception as e:
+        return f'<h1>Error accessing database: {str(e)}</h1>'
+    
+@app.route('/delete-user/<int:user_id>')
+def delete_user(user_id):
+    try:
+        conn = get_db_connection()
+        conn.execute('DELETE FROM user_data WHERE user_id = ?', (user_id,))
+        conn.commit()
+        conn.close()
+        return f'<h1>User deleted successfully!</h1><p><a href="/user">Back to users</a></p>'
+    except Exception as e:
+        return f'<h1>Error deleting user! {str(e)}</h1><p><a href="/user">Back to users</a></p>'
+
+@app.route('/create-subjects-db')
+def create_subjects_database_route():
+    try:
+        import Databases.subjects
+        Databases.subjects.create_subjects_database()
         return '''
         <h1>Database created successfully!</h1>
         <p><a href="/subjects">View Subjects</a></p>
         <p><a href="/">Back to Home</a></p>
         '''
     except Exception as e:
-        return f'<h1>Error: {str(e)}</h1>'
+        return f'<h1>Error creating database! {str(e)}</h1>'
+    
+@app.route('/create-user-db')
+def create_user_database_route():
+    try:
+        import Databases.user_data
+        Databases.user_data.create_user_database()
+        return '''
+        <h1>Database reset successfully!</h1>
+        <p><a href="/">Back to Home</a></p>
+        '''
+    except Exception as e:
+        return f'<h1>Error creating database! {str(e)}</h1>'
 
 if __name__ == '__main__':
     app.run(debug=True)
