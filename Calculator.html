@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPA Calculator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        
+        h2 {
+            font-size: 22px;
+            margin: 25px 0 15px;
+            padding: 0 20px 10px;
+            border-bottom: 2px solid #eaeaea;
+            color: #2c3e50;
+        }
+        
+        table {
+            width: calc(100% - 40px);
+            margin: 0 20px 20px;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background-color: #f8f9fa;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #2c3e50;
+            border-bottom: 2px solid #eaeaea;
+        }
+        
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .subject-name {
+            font-weight: 600;
+        }
+        
+        select, input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+            font-size: 14px;
+        }
+        
+        .action-btn {
+            background: none;
+            border: none;
+            color: #e74c3c;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 5px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        
+        .action-btn:hover {
+            background-color: #ffeaea;
+        }
+        
+        .add-subject {
+            display: flex;
+            justify-content: flex-end;
+            margin: 0 20px 30px;
+        }
+        
+        .add-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.2s;
+        }
+        
+        .add-btn:hover {
+            background-color: #2980b9;
+        }
+        
+        .gpa-display {
+            background-color: #f8f9fa;
+            padding: 20px;
+            margin: 0 20px 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .gpa-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .gpa-label {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+        
+        .gpa-subtext {
+            font-size: 12px;
+            color: #95a5a6;
+        }
+        
+        hr {
+            border: none;
+            height: 1px;
+            background-color: #eaeaea;
+            margin: 20px;
+        }
+        
+        .total-credits {
+            text-align: center;
+            padding: 10px;
+            font-weight: 600;
+            color: #2c3e50;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            margin: 0 20px 20px;
+        }
+        
+        @media (max-width: 768px) {
+            table {
+                display: block;
+                overflow-x: auto;
+            }
+            
+            th, td {
+                white-space: nowrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>GPA Calculator</h1>
+        </header>
+        
+        <h2>Trimester 1</h2>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Subject Name</th>
+                    <th>Credit Hours</th>
+                    <th>Grade</th>
+                    <th>Grade Point</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="subject-name">Mathematics</td>
+                    <td><input type="number" value="3" min="1" max="10"></td>
+                    <td>
+                        <select>
+                            <option>Select</option>
+                            <option>A+</option>
+                            <option>A</option>
+                            <option>A-</option>
+                            <option>B+</option>
+                            <option>B</option>
+                            <option>B-</option>
+                            <option>C+</option>
+                            <option>C</option>
+                            <option>C-</option>
+                            <option>D+</option>
+                            <option>D</option>
+                            <option>F</option>
+                        </select>
+                    </td>
+                    <td>0.00</td>
+                    <td>
+                        <button class="action-btn" title="Delete subject">
+                            🗑️
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="subject-name">Physics</td>
+                    <td><input type="number" value="4" min="1" max="10"></td>
+                    <td>
+                        <select>
+                            <option>Select</option>
+                            <option>A+</option>
+                            <option>A</option>
+                            <option>A-</option>
+                            <option>B+</option>
+                            <option>B</option>
+                            <option>B-</option>
+                            <option>C+</option>
+                            <option>C</option>
+                            <option>C-</option>
+                            <option>D+</option>
+                            <option>D</option>
+                            <option>F</option>
+                        </select>
+                    </td>
+                    <td>0.00</td>
+                    <td>
+                        <button class="action-btn" title="Delete subject">
+                            🗑️
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="subject-name">Chemistry</td>
+                    <td><input type="number" value="3" min="1" max="10"></td>
+                    <td>
+                        <select>
+                            <option>Select</option>
+                            <option>A+</option>
+                            <option>A</option>
+                            <option>A-</option>
+                            <option>B+</option>
+                            <option>B</option>
+                            <option>B-</option>
+                            <option>C+</option>
+                            <option>C</option>
+                            <option>C-</option>
+                            <option>D+</option>
+                            <option>D</option>
+                            <option>F</option>
+                        </select>
+                    </td>
+                    <td>0.00</td>
+                    <td>
+                        <button class="action-btn" title="Delete subject">
+                            🗑️
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="add-subject">
+            <button class="add-btn">+ Add Subject</button>
+        </div>
+        
+        <hr>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Grade point mapping
+            const gradePoints = {
+                'A+': 4.0,
+                'A': 4.0,
+                'A-': 3.8,
+                'B+': 3.46,
+                'B': 3.13,
+                'B-': 2.8,
+                'C+': 2.47,
+                'C': 2.13,
+                'C-': 1.67,
+                'D+': 1.33,
+                'D': 1.0,
+                'F': 0.0
+            };
+            
+            // Function to calculate GPA
+            function calculateGPA() {
+                let totalCreditHours = 0;
+                let totalGradePoints = 0;
+                
+                // Get all rows in the table
+                const rows = document.querySelectorAll('table tbody tr');
+                
+                rows.forEach(row => {
+                    const creditHours = parseInt(row.querySelector('input[type="number"]').value) || 0;
+                    const grade = row.querySelector('select').value;
+                    
+                    if (grade !== 'Select' && gradePoints.hasOwnProperty(grade)) {
+                        const gradePoint = gradePoints[grade];
+                        row.cells[3].textContent = gradePoint.toFixed(2);
+                        
+                        totalCreditHours += creditHours;
+                        totalGradePoints += creditHours * gradePoint;
+                    } else {
+                        row.cells[3].textContent = '0.00';
+                    }
+                });
+                
+                // Update GPA
+                const gpaElement = document.querySelector('.gpa-value');
+                const gpa = totalCreditHours > 0 ? (totalGradePoints / totalCreditHours).toFixed(2) : '0.00';
+                gpaElement.textContent = gpa;
+                
+                // Update total credit hours
+                document.getElementById('total-credits').textContent = totalCreditHours;
+            }
+            
+            // Add event listeners to inputs and selects
+            document.querySelectorAll('input, select').forEach(element => {
+                element.addEventListener('change', calculateGPA);
+            });
+            
+            // Add subject functionality
+            document.querySelector('.add-btn').addEventListener('click', function() {
+                const tbody = document.querySelector('table tbody');
+                const newRow = document.createElement('tr');
+                
+                newRow.innerHTML = `
+                    <td class="subject-name"><input type="text" placeholder="Subject Name"></td>
+                    <td><input type="number" value="3" min="1" max="10"></td>
+                    <td>
+                        <select>
+                            <option>Select</option>
+                            <option>A+</option>
+                            <option>A</option>
+                            <option>A-</option>
+                            <option>B+</option>
+                            <option>B</option>
+                            <option>B-</option>
+                            <option>C+</option>
+                            <option>C</option>
+                            <option>C-</option>
+                            <option>D+</option>
+                            <option>D</option>
+                            <option>F</option>
+                        </select>
+                    </td>
+                    <td>0.00</td>
+                    <td>
+                        <button class="action-btn" title="Delete subject">
+                            🗑️
+                        </button>
+                    </td>
+                `;
+                
+                tbody.appendChild(newRow);
+                
+                // Add event listeners to new inputs
+                newRow.querySelectorAll('input, select').forEach(element => {
+                    element.addEventListener('change', calculateGPA);
+                });
+                
+                // Add delete functionality to the new row
+                newRow.querySelector('.action-btn').addEventListener('click', function() {
+                    tbody.removeChild(newRow);
+                    calculateGPA();
+                });
+            });
+            
+            // Add delete functionality to existing rows
+            document.querySelectorAll('.action-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const row = this.closest('tr');
+                    row.parentNode.removeChild(row);
+                    calculateGPA();
+                });
+            });
+            
+            // Initialize GPA calculation
+            calculateGPA();
+        });
+    </script>
+</body>
+</html>

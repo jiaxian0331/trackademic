@@ -1,15 +1,15 @@
-# Databases/database.py
+# Databases/subjects.py
 import sqlite3
 
-def create_database():
-    """Create and populate a SQLite database for subjects"""
+def create_subjects_database():
+    """Create and populate a SQLite database for Trackademic"""
     
-    conn = sqlite3.connect('school_subjects.db')
+    conn = sqlite3.connect('trackademic.db')
     cursor = conn.cursor()
     
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS subjects (
-        subject_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        subject_id INTEGER PRIMARY KEY,
         subject_name TEXT NOT NULL UNIQUE,
         subject_code TEXT UNIQUE,
         credit_hours INTEGER DEFAULT 3
@@ -41,9 +41,9 @@ def create_database():
     )
 
     conn.commit()
-    print("Database 'school_subjects.db' created successfully!")
+    print("Subjects Database created successfully!")
     
     conn.close()
 
 if __name__ == "__main__":
-    create_database()
+    create_subjects_database()
