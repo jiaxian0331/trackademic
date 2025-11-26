@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Trackademic Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashstyle.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <img src="trackademiclogo.png" alt="Logo">
+            </div>
+            <div class="dashboard-title">Dashboard</div>
+            <div class="logout">
+                <span>Logout</span>
+            </div>
+        </header>
+
+        <div class="main-layout">
+            <aside class="sidebar">
+                <nav class="nav-menu">
+                    <div class="nav-item user-profile active-nav">
+                        <span>Username</span>
+                    </div>
+                    <div class="nav-item">
+                        <span>Saved</span>
+                    </div>
+                    <div class="nav-item">
+                        <span>GPA/CGPA Calculation</span>
+                    </div>
+                    <div class="nav-item">
+                        <span>Planner</span>
+                    </div>
+                </nav>
+            </aside>
+
+            <main class="main-content">
+                <div class="post-input-bar">
+                    <input type="text" placeholder="What's on your mind?">
+                </div>
+            </main>
+        </div>
+    </div>
+</body>
+</html>
