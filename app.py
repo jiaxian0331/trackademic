@@ -16,8 +16,11 @@ def home():
     <ul>
         <li><a href="/subjects">View All Subjects</a></li>
         <li><a href="/user">View All Users</a></li>
+        <li><a href="/gpa">View GPA Data</a></li>
         <li><a href="/create-subjects-db">Reset Subjects Database</a></li>
         <li><a href="/create-user-db">Reset User Database</a></li>
+        <li><a href="/create-notes-db">Reset Notes Database</a></li>
+        <li><a href="/create-gpa-db">Reset GPA Database</a></li>
     </ul>
     '''
 
@@ -198,6 +201,47 @@ def delete_user(user_id):
         return f'<h1>User deleted successfully!</h1><p><a href="/user">Back to users</a></p>'
     except Exception as e:
         return f'<h1>Error deleting user! {str(e)}</h1><p><a href="/user">Back to users</a></p>'
+    
+@app.route('/gpa')
+def list_gpa():
+    try:
+        conn = get_db_connection()
+        gpa = conn.execute('SELECT * FROM gpa ORDER BY trimester_id').fetchall()
+        conn.close()
+        
+        if not gpa:
+            return '<h1>No GPA found.</h1><p><a href="/create-gpa-db">Create database first</a></p>'
+        
+        html = '<h1>GPA Data</h1>'
+        html += '<table border="1">'
+        html += '<tr><th>ID</th><th>Trimester</th><th>GPA</th><th>Actions</th></tr>'
+        
+        for cgpa in gpa:
+            html += f'<tr>'
+            html += f'<td>{cgpa["trimester_id"]}</td>'
+            html += f'<td>{cgpa["Trimester"]}</td>'
+            html += f'<td>{cgpa["GPA"]}</td>'
+            html += f'<td>'
+            html += f'<a href="/delete-gpa/{cgpa["trimester_id"]}" style="border-radius: 3px; margin: 0 5px;" onclick="return confirm(\'Are you sure you want to delete this GPA data?\')">Delete</a>'
+            html += f'</td>'
+            html += f'</tr>'
+        
+        html += '</table>'
+        html += '<p><a href="/">Back to Home</a></p>'
+        return html
+    except Exception as e:
+        return f'<h1>Error accessing database: {str(e)}</h1>'
+    
+@app.route('/delete-gpa/<int:trimester_id>')
+def delete_gpa(trimester_id):
+    try:
+        conn = get_db_connection()
+        conn.execute('DELETE FROM gpa WHERE trimester_id = ?', (trimester_id,))
+        conn.commit()
+        conn.close()
+        return f'<h1>GPA deleted successfully!</h1><p><a href="/gpa">Back to GPA Data</a></p>'
+    except Exception as e:
+        return f'<h1>Error deleting GPA! {str(e)}</h1><p><a href="/gpa">Back to GPA Data</a></p>'
 
 @app.route('/create-subjects-db')
 def create_subjects_database_route():
@@ -217,6 +261,30 @@ def create_user_database_route():
     try:
         import Databases.user_data
         Databases.user_data.create_user_database()
+        return '''
+        <h1>Database reset successfully!</h1>
+        <p><a href="/">Back to Home</a></p>
+        '''
+    except Exception as e:
+        return f'<h1>Error creating database! {str(e)}</h1>'
+    
+@app.route('/create-notes-db')
+def create_notes_database_route():
+    try:
+        import Databases.notes
+        Databases.notes.create_notes_database()
+        return '''
+        <h1>Database reset successfully!</h1>
+        <p><a href="/">Back to Home</a></p>
+        '''
+    except Exception as e:
+        return f'<h1>Error creating database! {str(e)}</h1>'
+    
+@app.route('/create-gpa-db')
+def create_gpa_database_route():
+    try:
+        import Databases.gpa
+        Databases.gpa.create_gpa_database()
         return '''
         <h1>Database reset successfully!</h1>
         <p><a href="/">Back to Home</a></p>
