@@ -7,31 +7,46 @@ def create_notes_database():
     conn = sqlite3.connect('trackademic.db')
     cursor = conn.cursor()
     
+    # Enable foreign key constraints
+    cursor.execute("PRAGMA foreign_keys = ON")
+    
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS notes (
         note_id INTEGER PRIMARY KEY,
         subject_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         file_name TEXT NOT NULL,
-        file BLOB
+        file BLOB,
+        FOREIGN KEY (subject_id) REFERENCES subjects(subject_id)
+            ON DELETE CASCADE
+            ON UPDATE CASCADE
     )
     ''')
     
+    # Fixed notes data - proper tuple structure
     notes = [
-        ('subject_id', 'file_name', 'file'),
+        (1, 1, 'business_notes.pdf', None),  # subject_id, user_id, file_name, file
+        (2, 1, 'computing_notes.pdf', None),
+        (3, 1, 'english_notes.pdf', None),
     ]
     
-    cursor.executemany(
-        '''INSERT OR IGNORE INTO notes
-        (subject_id, file_name, file) 
-        VALUES (?, ?, ?)''',
-        notes
-    )
-
-    conn.commit()
-    print("Notes Database created successfully!")
-    
-    conn.close()
+    try:
+        cursor.executemany(
+            '''INSERT OR IGNORE INTO notes
+            (subject_id, user_id, file_name, file) 
+            VALUES (?, ?, ?, ?)''',
+            notes
+        )
+        conn.commit()
+        print("Notes Database created successfully!")
+    except sqlite3.IntegrityError as e:
+        print(f"Warning: Some notes couldn't be inserted (foreign key constraint): {e}")
+        conn.rollback()
+    except Exception as e:
+        print(f"Error creating notes database: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
 
 if __name__ == "__main__":
     create_notes_database()
