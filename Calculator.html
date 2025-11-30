@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GPA Calculator</title>
+    <title>Subject Manager</title>
     <style>
         * {
             margin: 0;
@@ -25,7 +25,7 @@
         
         .container {
             width: 100%;
-            max-width: 900px;
+            max-width: 1000px;
             background-color: white;
             border-radius: 10px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
@@ -80,6 +80,18 @@
             font-weight: 600;
         }
         
+        .subject-code {
+            color: #666;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        
+        .credit-hours {
+            font-weight: 600;
+            color: #2c3e50;
+            text-align: center;
+        }
+        
         select, input {
             padding: 8px 12px;
             border: 1px solid #ddd;
@@ -108,10 +120,16 @@
             background-color: #ffeaea;
         }
         
-        .add-subject {
+        .add-subject-container {
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
             margin: 0 20px 30px;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .subject-select {
+            flex: 1;
         }
         
         .add-btn {
@@ -126,53 +144,32 @@
             align-items: center;
             gap: 8px;
             transition: background-color 0.2s;
+            white-space: nowrap;
         }
         
         .add-btn:hover {
             background-color: #2980b9;
         }
         
-        .gpa-display {
-            background-color: #f8f9fa;
+        .add-btn:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .loading {
+            text-align: center;
             padding: 20px;
-            margin: 0 20px 20px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        
-        .gpa-value {
-            font-size: 32px;
-            font-weight: 700;
-            color: #2c3e50;
-            margin-bottom: 5px;
-        }
-        
-        .gpa-label {
-            font-size: 14px;
             color: #7f8c8d;
-            margin-bottom: 5px;
+            margin: 0 20px;
         }
         
-        .gpa-subtext {
-            font-size: 12px;
-            color: #95a5a6;
-        }
-        
-        hr {
-            border: none;
-            height: 1px;
-            background-color: #eaeaea;
-            margin: 20px;
-        }
-        
-        .total-credits {
+        .error {
             text-align: center;
-            padding: 10px;
-            font-weight: 600;
-            color: #2c3e50;
-            background-color: #f8f9fa;
-            border-radius: 4px;
+            padding: 20px;
+            color: #e74c3c;
+            background-color: #ffeaea;
             margin: 0 20px 20px;
+            border-radius: 4px;
         }
         
         @media (max-width: 768px) {
@@ -184,198 +181,148 @@
             th, td {
                 white-space: nowrap;
             }
+            
+            .add-subject-container {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>GPA Calculator</h1>
+            <h1>Subject Manager</h1>
         </header>
         
         <h2>Trimester 1</h2>
+        
+        <div class="add-subject-container">
+            <select id="subject-select" class="subject-select">
+                <option value="">Select a subject to add...</option>
+            </select>
+            <button class="add-btn" id="add-subject-btn" disabled>+ Add Subject</button>
+        </div>
         
         <table>
             <thead>
                 <tr>
                     <th>Subject Name</th>
+                    <th>Subject Code</th>
                     <th>Credit Hours</th>
-                    <th>Grade</th>
-                    <th>Grade Point</th>
                     <th>Action</th>
                 </tr>
             </thead>
-            <tbody>
-                <tr>
-                    <td class="subject-name">Mathematics</td>
-                    <td><input type="number" value="3" min="1" max="10"></td>
-                    <td>
-                        <select>
-                            <option>Select</option>
-                            <option>A+</option>
-                            <option>A</option>
-                            <option>A-</option>
-                            <option>B+</option>
-                            <option>B</option>
-                            <option>B-</option>
-                            <option>C+</option>
-                            <option>C</option>
-                            <option>C-</option>
-                            <option>D+</option>
-                            <option>D</option>
-                            <option>F</option>
-                        </select>
-                    </td>
-                    <td>0.00</td>
-                    <td>
-                        <button class="action-btn" title="Delete subject">
-                            🗑️
-                        </button>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="subject-name">Physics</td>
-                    <td><input type="number" value="4" min="1" max="10"></td>
-                    <td>
-                        <select>
-                            <option>Select</option>
-                            <option>A+</option>
-                            <option>A</option>
-                            <option>A-</option>
-                            <option>B+</option>
-                            <option>B</option>
-                            <option>B-</option>
-                            <option>C+</option>
-                            <option>C</option>
-                            <option>C-</option>
-                            <option>D+</option>
-                            <option>D</option>
-                            <option>F</option>
-                        </select>
-                    </td>
-                    <td>0.00</td>
-                    <td>
-                        <button class="action-btn" title="Delete subject">
-                            🗑️
-                        </button>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="subject-name">Chemistry</td>
-                    <td><input type="number" value="3" min="1" max="10"></td>
-                    <td>
-                        <select>
-                            <option>Select</option>
-                            <option>A+</option>
-                            <option>A</option>
-                            <option>A-</option>
-                            <option>B+</option>
-                            <option>B</option>
-                            <option>B-</option>
-                            <option>C+</option>
-                            <option>C</option>
-                            <option>C-</option>
-                            <option>D+</option>
-                            <option>D</option>
-                            <option>F</option>
-                        </select>
-                    </td>
-                    <td>0.00</td>
-                    <td>
-                        <button class="action-btn" title="Delete subject">
-                            🗑️
-                        </button>
-                    </td>
-                </tr>
+            <tbody id="subjects-tbody">
+                <!-- Subjects will be loaded here dynamically -->
             </tbody>
         </table>
         
-        <div class="add-subject">
-            <button class="add-btn">+ Add Subject</button>
-        </div>
-        
-        <hr>
-        <script>
+        <div id="loading-message" class="loading">Loading subjects from database...</div>
+        <div id="error-message" class="error" style="display: none;"></div>
+    </div>
+
+    <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Grade point mapping
-            const gradePoints = {
-                'A+': 4.0,
-                'A': 4.0,
-                'A-': 3.8,
-                'B+': 3.46,
-                'B': 3.13,
-                'B-': 2.8,
-                'C+': 2.47,
-                'C': 2.13,
-                'C-': 1.67,
-                'D+': 1.33,
-                'D': 1.0,
-                'F': 0.0
-            };
+            const API_BASE_URL = 'http://localhost:5000/api';
+            let allSubjects = [];
+            let addedSubjectIds = new Set();
             
-            // Function to calculate GPA
-            function calculateGPA() {
-                let totalCreditHours = 0;
-                let totalGradePoints = 0;
-                
-                // Get all rows in the table
-                const rows = document.querySelectorAll('table tbody tr');
-                
-                rows.forEach(row => {
-                    const creditHours = parseInt(row.querySelector('input[type="number"]').value) || 0;
-                    const grade = row.querySelector('select').value;
-                    
-                    if (grade !== 'Select' && gradePoints.hasOwnProperty(grade)) {
-                        const gradePoint = gradePoints[grade];
-                        row.cells[3].textContent = gradePoint.toFixed(2);
-                        
-                        totalCreditHours += creditHours;
-                        totalGradePoints += creditHours * gradePoint;
-                    } else {
-                        row.cells[3].textContent = '0.00';
-                    }
-                });
-                
-                // Update GPA
-                const gpaElement = document.querySelector('.gpa-value');
-                const gpa = totalCreditHours > 0 ? (totalGradePoints / totalCreditHours).toFixed(2) : '0.00';
-                gpaElement.textContent = gpa;
-                
-                // Update total credit hours
-                document.getElementById('total-credits').textContent = totalCreditHours;
-            }
+            // DOM elements
+            const subjectSelect = document.getElementById('subject-select');
+            const addSubjectBtn = document.getElementById('add-subject-btn');
+            const subjectsTbody = document.getElementById('subjects-tbody');
+            const loadingMessage = document.getElementById('loading-message');
+            const errorMessage = document.getElementById('error-message');
             
-            // Add event listeners to inputs and selects
-            document.querySelectorAll('input, select').forEach(element => {
-                element.addEventListener('change', calculateGPA);
+            // Initialize the application
+            loadAllSubjects();
+            
+            // Event listeners
+            subjectSelect.addEventListener('change', function() {
+                addSubjectBtn.disabled = !this.value;
             });
             
-            // Add subject functionality
-            document.querySelector('.add-btn').addEventListener('click', function() {
-                const tbody = document.querySelector('table tbody');
-                const newRow = document.createElement('tr');
+            addSubjectBtn.addEventListener('click', addSelectedSubject);
+            
+            function loadAllSubjects() {
+                // First try to load from the backend API
+                fetch(`${API_BASE_URL}/subjects`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Backend not available');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        allSubjects = data.subjects;
+                        populateSubjectSelect();
+                        loadingMessage.style.display = 'none';
+                    })
+                    .catch(error => {
+                        console.log('Backend not available, using default subjects');
+                        // Use default subjects if backend is not available
+                        allSubjects = getDefaultSubjects();
+                        populateSubjectSelect();
+                        loadingMessage.style.display = 'none';
+                    });
+            }
+            
+            function getDefaultSubjects() {
+                return [
+                    { id: 1, name: "Introduction to Business Management", code: "GNB1114", credits: 4 },
+                    { id: 2, name: "Introduction to Computing Technologies", code: "CCT1114", credits: 4 },
+                    { id: 3, name: "Communicative English", code: "LCE1113", credits: 3 },
+                    { id: 4, name: "Mathematics I", code: "CMT1114", credits: 4 },
+                    { id: 5, name: "Problem Solving & Program Design", code: "CSP1114", credits: 4 },
+                    { id: 6, name: "Essential English", code: "LEE1113", credits: 3 },
+                    { id: 7, name: "Multimedia Fundamentals", code: "CMF1114", credits: 4 },
+                    { id: 8, name: "Mathematics II", code: "CMT1124", credits: 4 },
+                    { id: 9, name: "Critical Thinking", code: "LCT1113", credits: 3 },
+                    { id: 10, name: "Introduction to Digital Systems", code: "CDS1114", credits: 4 },
+                    { id: 11, name: "Academic English", code: "LAE1113", credits: 3 },
+                    { id: 12, name: "Mathematics III", code: "CMT1134", credits: 4 },
+                    { id: 13, name: "Principles of Physics", code: "CPP1113", credits: 3 },
+                    { id: 14, name: "Mini IT Project", code: "CSP1123", credits: 3 }
+                ];
+            }
+            
+            function populateSubjectSelect() {
+                subjectSelect.innerHTML = '<option value="">Select a subject to add...</option>';
                 
-                newRow.innerHTML = `
-                    <td class="subject-name"><input type="text" placeholder="Subject Name"></td>
-                    <td><input type="number" value="3" min="1" max="10"></td>
-                    <td>
-                        <select>
-                            <option>Select</option>
-                            <option>A+</option>
-                            <option>A</option>
-                            <option>A-</option>
-                            <option>B+</option>
-                            <option>B</option>
-                            <option>B-</option>
-                            <option>C+</option>
-                            <option>C</option>
-                            <option>C-</option>
-                            <option>D+</option>
-                            <option>D</option>
-                            <option>F</option>
-                        </select>
-                    </td>
-                    <td>0.00</td>
+                allSubjects.forEach(subject => {
+                    const option = document.createElement('option');
+                    option.value = subject.id;
+                    option.textContent = `${subject.code} - ${subject.name} (${subject.credits} credits)`;
+                    option.dataset.subject = JSON.stringify(subject);
+                    subjectSelect.appendChild(option);
+                });
+            }
+            
+            function addSelectedSubject() {
+                const selectedOption = subjectSelect.options[subjectSelect.selectedIndex];
+                if (!selectedOption.value) return;
+                
+                const subject = JSON.parse(selectedOption.dataset.subject);
+                
+                // Check if subject already added
+                if (addedSubjectIds.has(subject.id)) {
+                    alert('This subject has already been added to the trimester.');
+                    return;
+                }
+                
+                addSubjectToTable(subject);
+                addedSubjectIds.add(subject.id);
+                subjectSelect.value = '';
+                addSubjectBtn.disabled = true;
+            }
+            
+            function addSubjectToTable(subject) {
+                const row = document.createElement('tr');
+                row.dataset.subjectId = subject.id;
+                row.innerHTML = `
+                    <td class="subject-name">${subject.name}</td>
+                    <td class="subject-code">${subject.code}</td>
+                    <td class="credit-hours">${subject.credits}</td>
                     <td>
                         <button class="action-btn" title="Delete subject">
                             🗑️
@@ -383,31 +330,19 @@
                     </td>
                 `;
                 
-                tbody.appendChild(newRow);
+                subjectsTbody.appendChild(row);
                 
-                // Add event listeners to new inputs
-                newRow.querySelectorAll('input, select').forEach(element => {
-                    element.addEventListener('change', calculateGPA);
+                // Add delete functionality
+                row.querySelector('.action-btn').addEventListener('click', function() {
+                    const subjectId = parseInt(row.dataset.subjectId);
+                    addedSubjectIds.delete(subjectId);
+                    row.remove();
                 });
-                
-                // Add delete functionality to the new row
-                newRow.querySelector('.action-btn').addEventListener('click', function() {
-                    tbody.removeChild(newRow);
-                    calculateGPA();
-                });
-            });
-            
-            // Add delete functionality to existing rows
-            document.querySelectorAll('.action-btn').forEach(button => {
-                button.addEventListener('click', function() {
-                    const row = this.closest('tr');
-                    row.parentNode.removeChild(row);
-                    calculateGPA();
-                });
-            });
-            
-            // Initialize GPA calculation
-            calculateGPA();
+            }
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+            }
         });
     </script>
 </body>

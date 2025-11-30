@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subject Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        
+        h2 {
+            font-size: 22px;
+            margin: 25px 0 15px;
+            padding: 0 20px 10px;
+            border-bottom: 2px solid #eaeaea;
+            color: #2c3e50;
+        }
+        
+        table {
+            width: calc(100% - 40px);
+            margin: 0 20px 20px;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background-color: #f8f9fa;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #2c3e50;
+            border-bottom: 2px solid #eaeaea;
+        }
+        
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .subject-name {
+            font-weight: 600;
+        }
+        
+        .subject-code {
+            color: #666;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        
+        .credit-hours {
+            font-weight: 600;
+            color: #2c3e50;
+            text-align: center;
+        }
+        
+        select, input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+            font-size: 14px;
+        }
+        
+        .action-btn {
+            background: none;
+            border: none;
+            color: #e74c3c;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 5px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        
+        .action-btn:hover {
+            background-color: #ffeaea;
+        }
+        
+        .add-subject-container {
+            display: flex;
+            justify-content: space-between;
+            margin: 0 20px 30px;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .subject-select {
+            flex: 1;
+        }
+        
+        .add-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.2s;
+            white-space: nowrap;
+        }
+        
+        .add-btn:hover {
+            background-color: #2980b9;
+        }
+        
+        .add-btn:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+            margin: 0 20px;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 20px;
+            color: #e74c3c;
+            background-color: #ffeaea;
+            margin: 0 20px 20px;
+            border-radius: 4px;
+        }
+        
+        @media (max-width: 768px) {
+            table {
+                display: block;
+                overflow-x: auto;
+            }
+            
+            th, td {
+                white-space: nowrap;
+            }
+            
+            .add-subject-container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Subject Manager</h1>
+        </header>
+        
+        <h2>Trimester 1</h2>
+        
+        <div class="add-subject-container">
+            <select id="subject-select" class="subject-select">
+                <option value="">Select a subject to add...</option>
+            </select>
+            <button class="add-btn" id="add-subject-btn" disabled>+ Add Subject</button>
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Subject Name</th>
+                    <th>Subject Code</th>
+                    <th>Credit Hours</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="subjects-tbody">
+                <!-- Subjects will be loaded here dynamically -->
+            </tbody>
+        </table>
+        
+        <div id="loading-message" class="loading">Loading subjects from database...</div>
+        <div id="error-message" class="error" style="display: none;"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const API_BASE_URL = 'http://localhost:5000/api';
+            let allSubjects = [];
+            let addedSubjectIds = new Set();
+            
+            // DOM elements
+            const subjectSelect = document.getElementById('subject-select');
+            const addSubjectBtn = document.getElementById('add-subject-btn');
+            const subjectsTbody = document.getElementById('subjects-tbody');
+            const loadingMessage = document.getElementById('loading-message');
+            const errorMessage = document.getElementById('error-message');
+            
+            // Initialize the application
+            loadAllSubjects();
+            
+            // Event listeners
+            subjectSelect.addEventListener('change', function() {
+                addSubjectBtn.disabled = !this.value;
+            });
+            
+            addSubjectBtn.addEventListener('click', addSelectedSubject);
+            
+            function loadAllSubjects() {
+                // First try to load from the backend API
+                fetch(`${API_BASE_URL}/subjects`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Backend not available');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        allSubjects = data.subjects;
+                        populateSubjectSelect();
+                        loadingMessage.style.display = 'none';
+                    })
+                    .catch(error => {
+                        console.log('Backend not available, using default subjects');
+                        // Use default subjects if backend is not available
+                        allSubjects = getDefaultSubjects();
+                        populateSubjectSelect();
+                        loadingMessage.style.display = 'none';
+                    });
+            }
+            
+            function getDefaultSubjects() {
+                return [
+                    { id: 1, name: "Introduction to Business Management", code: "GNB1114", credits: 4 },
+                    { id: 2, name: "Introduction to Computing Technologies", code: "CCT1114", credits: 4 },
+                    { id: 3, name: "Communicative English", code: "LCE1113", credits: 3 },
+                    { id: 4, name: "Mathematics I", code: "CMT1114", credits: 4 },
+                    { id: 5, name: "Problem Solving & Program Design", code: "CSP1114", credits: 4 },
+                    { id: 6, name: "Essential English", code: "LEE1113", credits: 3 },
+                    { id: 7, name: "Multimedia Fundamentals", code: "CMF1114", credits: 4 },
+                    { id: 8, name: "Mathematics II", code: "CMT1124", credits: 4 },
+                    { id: 9, name: "Critical Thinking", code: "LCT1113", credits: 3 },
+                    { id: 10, name: "Introduction to Digital Systems", code: "CDS1114", credits: 4 },
+                    { id: 11, name: "Academic English", code: "LAE1113", credits: 3 },
+                    { id: 12, name: "Mathematics III", code: "CMT1134", credits: 4 },
+                    { id: 13, name: "Principles of Physics", code: "CPP1113", credits: 3 },
+                    { id: 14, name: "Mini IT Project", code: "CSP1123", credits: 3 }
+                ];
+            }
+            
+            function populateSubjectSelect() {
+                subjectSelect.innerHTML = '<option value="">Select a subject to add...</option>';
+                
+                allSubjects.forEach(subject => {
+                    const option = document.createElement('option');
+                    option.value = subject.id;
+                    option.textContent = `${subject.code} - ${subject.name} (${subject.credits} credits)`;
+                    option.dataset.subject = JSON.stringify(subject);
+                    subjectSelect.appendChild(option);
+                });
+            }
+            
+            function addSelectedSubject() {
+                const selectedOption = subjectSelect.options[subjectSelect.selectedIndex];
+                if (!selectedOption.value) return;
+                
+                const subject = JSON.parse(selectedOption.dataset.subject);
+                
+                // Check if subject already added
+                if (addedSubjectIds.has(subject.id)) {
+                    alert('This subject has already been added to the trimester.');
+                    return;
+                }
+                
+                addSubjectToTable(subject);
+                addedSubjectIds.add(subject.id);
+                subjectSelect.value = '';
+                addSubjectBtn.disabled = true;
+            }
+            
+            function addSubjectToTable(subject) {
+                const row = document.createElement('tr');
+                row.dataset.subjectId = subject.id;
+                row.innerHTML = `
+                    <td class="subject-name">${subject.name}</td>
+                    <td class="subject-code">${subject.code}</td>
+                    <td class="credit-hours">${subject.credits}</td>
+                    <td>
+                        <button class="action-btn" title="Delete subject">
+                            🗑️
+                        </button>
+                    </td>
+                `;
+                
+                subjectsTbody.appendChild(row);
+                
+                // Add delete functionality
+                row.querySelector('.action-btn').addEventListener('click', function() {
+                    const subjectId = parseInt(row.dataset.subjectId);
+                    addedSubjectIds.delete(subjectId);
+                    row.remove();
+                });
+            }
+            
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
