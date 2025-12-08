@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Saved Posts</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashstyle.css') }}">
+</head>
+<body>
+<div class="container">
+    <header class="header">
+        <div class="logo"><img src="trackademiclogo.png" alt="Logo"></div>
+        <div class="dashboard-title">Saved Posts</div>
+        <div class="logout"><a href="{{ url_for('logout') }}">Logout</a></div>
+    </header>
+
+    <div class="main-layout">
+        <aside class="sidebar">
+            <nav class="nav-menu">
+                <div class="nav-item user-profile active-nav"><a href="{{ url_for('dashboard') }}">{{ username }}</a></div>
+                <div class="nav-item"><a href="{{ url_for('saved_posts') }}">Saved Posts</a></div>
+                <div class="nav-item"><span>GPA/CGPA Calculation</span></div>
+                <div class="nav-item"><span>Planner</span></div>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            {% if posts %}
+            <div class="posts-feed">
+                {% for post_id, content, filename, poster in posts %}
+                <div class="post">
+                    <p><strong>{{ poster }}</strong></p>
+                    <p>{{ content }}</p>
+
+                    {% if filename %}
+                        {% if filename.endswith(('.png', '.jpg', '.jpeg', '.gif')) %}
+                            <img src="{{ url_for('static', filename='uploads/' ~ filename) }}" alt="Post image">
+                        {% else %}
+                            <p>File: <a href="{{ url_for('static', filename='uploads/' ~ filename) }}">{{ filename }}</a></p>
+                        {% endif %}
+                    {% endif %}
+
+                    <div class="post-actions">
+                        <form action="{{ url_for('unsave_post', post_id=post_id) }}" method="POST">
+                            <button type="submit">Unsave</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p>No saved posts yet.</p>
+            {% endif %}
+        </main>
+    </div>
+</div>
+</body>
+</html>
