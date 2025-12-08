@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # Databases/user_data.py
+=======
+# Databases/gpa.py
+>>>>>>> jiaxian
 import sqlite3
 
 def create_gpa_database():
@@ -20,7 +24,11 @@ def create_gpa_database():
     ]
     
     cursor.executemany(
+<<<<<<< HEAD
         '''INSERT OR IGNORE INTO gpa 
+=======
+        '''INSERT OR IGNORE INTO gpa
+>>>>>>> jiaxian
         (trimester, gpa) 
         VALUES (?, ?)''',
         gpa
