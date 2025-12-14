@@ -111,7 +111,7 @@
         .action-btn {
             background: none;
             border: none;
-            color: #e74c3c;
+            color: #666;
             cursor: pointer;
             font-size: 18px;
             padding: 5px;
@@ -125,7 +125,30 @@
         }
         
         .action-btn:hover {
-            background-color: #ffeaea;
+            background-color: #f0f0f0;
+        }
+        
+        .trimester-selector {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 0 20px;
+            padding: 10px 0;
+        }
+        
+        .trimester-label {
+            font-size: 22px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .trimester-dropdown {
+            width: 200px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+            background-color: #f8f9fa;
+            border: 2px solid #ddd;
         }
         
         .add-subject-container {
@@ -141,9 +164,9 @@
         }
         
         .add-btn {
-            background-color: #3498db;
-            color: white;
-            border: none;
+            background-color: #f8f9fa;
+            color: #333;
+            border: 1px solid #ddd;
             padding: 10px 20px;
             border-radius: 4px;
             cursor: pointer;
@@ -151,17 +174,20 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            transition: background-color 0.2s;
+            transition: all 0.2s;
             white-space: nowrap;
         }
         
         .add-btn:hover {
-            background-color: #2980b9;
+            background-color: #e9ecef;
+            border-color: #ccc;
         }
         
         .add-btn:disabled {
-            background-color: #bdc3c7;
+            background-color: #f8f9fa;
+            color: #999;
             cursor: not-allowed;
+            border-color: #eee;
         }
         
         .results-container {
@@ -205,32 +231,47 @@
         
         .save-btn {
             background-color: #f8f9fa;
-            color: #2c3e50;
+            color: #333;
             border: 1px solid #ddd;
             padding: 12px 25px;
             border-radius: 4px;
             cursor: pointer;
             font-weight: 600;
-            transition: background-color 0.2s;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
         .save-btn:hover {
-            background-color: #eaeaea;
+            background-color: #e9ecef;
+            border-color: #ccc;
+        }
+        
+        .save-btn:disabled {
+            background-color: #f8f9fa;
+            color: #999;
+            cursor: not-allowed;
+            border-color: #eee;
         }
         
         .reset-btn {
             background-color: #f8f9fa;
-            color: #2c3e50;
+            color: #333;
             border: 1px solid #ddd;
             padding: 12px 25px;
             border-radius: 4px;
             cursor: pointer;
             font-weight: 600;
-            transition: background-color 0.2s;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
         .reset-btn:hover {
-            background-color: #eaeaea;
+            background-color: #e9ecef;
+            border-color: #ccc;
         }
         
         .loading {
@@ -243,10 +284,11 @@
         .error {
             text-align: center;
             padding: 20px;
-            color: #e74c3c;
-            background-color: #ffeaea;
+            color: #666;
+            background-color: #f8f9fa;
             margin: 0 20px 20px;
             border-radius: 4px;
+            border: 1px solid #eee;
         }
         
         .info-message {
@@ -257,7 +299,7 @@
             margin: 0 20px;
             border-radius: 4px;
             font-size: 14px;
-            border-left: 4px solid #3498db;
+            border-left: 3px solid #ddd;
         }
         
         .cgpa-history {
@@ -296,6 +338,16 @@
                 white-space: nowrap;
             }
             
+            .trimester-selector {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .trimester-dropdown {
+                width: 100%;
+            }
+            
             .add-subject-container {
                 flex-direction: column;
             }
@@ -316,7 +368,18 @@
             <h1>Calculator Trackademic</h1>
         </header>
         
-        <h2>Trimester 1</h2>
+        <!-- Trimester Selector Section -->
+        <div class="trimester-selector">
+            <div class="trimester-label">Current Trimester:</div>
+            <select id="trimester-select" class="trimester-dropdown">
+                <option value="1">Trimester 1</option>
+                <option value="2">Trimester 2</option>
+                <option value="3">Trimester 3</option>
+                <option value="4">Trimester 4</option>
+                <option value="5">Trimester 5</option>
+                <option value="6">Trimester 6</option>
+            </select>
+        </div>
         
         <div class="add-subject-container">
             <select id="subject-select" class="subject-select">
@@ -344,35 +407,46 @@
         <div id="loading-message" class="loading">Loading subjects from database...</div>
         <div id="error-message" class="error" style="display: none;"></div>
         
+        <!-- Real-time GPA Display -->
         <div class="results-container">
-            <div class="result-box">
+            <div class="result-box" id="gpa-box">
                 <div class="result-label">GPA (Current Trimester)</div>
                 <div class="result-value" id="gpa-result">0.00</div>
             </div>
         </div>
         
         <div class="action-buttons">
-            <button class="save-btn" id="save-cgpa-btn">Save Trimester</button>
-            <button class="reset-btn" id="reset-btn">Reset Trimester</button>
+            <button class="save-btn" id="save-cgpa-btn" disabled>
+                Save Trimester
+            </button>
+            <button class="reset-btn" id="reset-btn">
+                Reset Trimester
+            </button>
+            <button class="reset-btn" id="clear-history-btn">
+                Clear All History
+            </button>
         </div>
         
         <h2>CGPA History</h2>
         <div class="cgpa-history" id="cgpa-history">
+            <div class="history-item" style="color: #7f8c8d; font-style: italic;">
+                No CGPA history yet. Save your first trimester to start tracking.
+            </div>
         </div>
         
         <div class="cgpa-summary">
-            <div class="result-label">CGPA </div>
+            <div class="result-label">CGPA</div>
             <div class="result-value" id="cgpa-result">0.00</div>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const API_BASE_URL = 'http://localhost:5000';  // Changed from /api to root
+            const API_BASE_URL = 'http://localhost:5000';
             let allSubjects = [];
             let addedSubjectIds = new Set();
             let currentSubjects = []; // Track subjects with grades
-            let cgpaHistory = [];
+            let cgpaHistory = []; // Start with empty history
             
             // Grade mapping
             const gradeScale = {
@@ -391,6 +465,7 @@
             };
             
             // DOM elements
+            const trimesterSelect = document.getElementById('trimester-select');
             const subjectSelect = document.getElementById('subject-select');
             const addSubjectBtn = document.getElementById('add-subject-btn');
             const subjectsTbody = document.getElementById('subjects-tbody');
@@ -398,22 +473,44 @@
             const errorMessage = document.getElementById('error-message');
             const saveCgpaBtn = document.getElementById('save-cgpa-btn');
             const resetBtn = document.getElementById('reset-btn');
+            const clearHistoryBtn = document.getElementById('clear-history-btn');
             const gpaResultEl = document.getElementById('gpa-result');
             const cgpaResultEl = document.getElementById('cgpa-result');
             const cgpaHistoryEl = document.getElementById('cgpa-history');
             
-            // Initialize the application
+            // Initialize the application - START FRESH
             loadAllSubjects();
-            loadCgpaHistory();
+            initializeFreshState(); // Start with empty history
             
             // Event listeners
             subjectSelect.addEventListener('change', function() {
                 addSubjectBtn.disabled = !this.value;
             });
             
+            trimesterSelect.addEventListener('change', function() {
+                const trimesterNumber = this.value;
+                console.log(`Switched to Trimester ${trimesterNumber}`);
+                resetTrimester();
+            });
+            
             addSubjectBtn.addEventListener('click', addSelectedSubject);
             saveCgpaBtn.addEventListener('click', saveToCgpaHistory);
             resetBtn.addEventListener('click', resetTrimester);
+            clearHistoryBtn.addEventListener('click', clearAllHistory);
+            
+            function initializeFreshState() {
+                // Clear any existing localStorage data
+                localStorage.removeItem('cgpaHistory');
+                
+                // Reset cgpaHistory to empty array
+                cgpaHistory = [];
+                
+                // Update displays
+                updateCgpaHistoryDisplay();
+                calculateCGPA();
+                
+                console.log('Started with fresh state - no previous history loaded');
+            }
             
             function loadAllSubjects() {
                 fetch(`${API_BASE_URL}/api/subjects`)
@@ -437,56 +534,6 @@
                         console.error('Error loading subjects:', error);
                         showError(`Error loading subjects: ${error.message}. Please make sure the backend server is running at http://localhost:5000`);
                         loadingMessage.textContent = 'Failed to load subjects from database. Check if Flask server is running.';
-                    });
-            }
-
-            function loadAllSubjects() {
-              fetch(`${API_BASE_URL}/api/subjects`)
-            .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to load subjects from database');
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                allSubjects = data.subjects;
-                populateSubjectSelect();
-                loadingMessage.style.display = 'none';
-                console.log(`Loaded ${allSubjects.length} subjects from database`);
-            } else {
-                throw new Error(data.error || 'Failed to load subjects');
-            }
-        })
-        .catch(error => {
-            console.error('Error loading subjects:', error);
-            showError(`Error loading subjects: ${error.message}. Please make sure the backend server is running at http://localhost:5000`);
-            loadingMessage.textContent = 'Failed to load subjects from database. Check if Flask server is running.';
-        });
-}
-            
-            function loadCgpaHistory() {
-                fetch(`${API_BASE_URL}/api/cgpa-history`)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Failed to load CGPA history');
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (data.success) {
-                            cgpaHistory = data.history;
-                            updateCgpaHistoryDisplay();
-                            calculateCGPA();
-                        } else {
-                            throw new Error(data.error || 'Failed to load CGPA history');
-                        }
-                    })
-                    .catch(error => {
-                        console.log('Error loading CGPA history:', error);
-                        cgpaHistory = JSON.parse(localStorage.getItem('cgpaHistory')) || [];
-                        updateCgpaHistoryDisplay();
-                        calculateCGPA();
                     });
             }
             
@@ -543,7 +590,7 @@
                     <td class="grade-points" id="grade-points-${subject.id}">0.00</td>
                     <td>
                         <button class="action-btn" title="Delete subject">
-                            🗑️
+                            ×
                         </button>
                     </td>
                 `;
@@ -556,7 +603,8 @@
                     name: subject.name,
                     code: subject.code,
                     credits: subject.credits,
-                    grade: ''
+                    grade: '',
+                    trimester: trimesterSelect.value
                 };
                 currentSubjects.push(subjectWithGrade);
                 
@@ -570,6 +618,9 @@
                     if (subjectIndex !== -1) {
                         currentSubjects[subjectIndex].grade = this.value;
                     }
+                    
+                    // Recalculate and update GPA display
+                    calculateAndDisplayGPA();
                 });
                 
                 // Add delete functionality
@@ -584,7 +635,7 @@
                     }
                     
                     row.remove();
-                    calculateGPA();
+                    calculateAndDisplayGPA();
                 });
             }
             
@@ -608,12 +659,19 @@
                 if (gradePointsEl) {
                     gradePointsEl.textContent = gradePoints.toFixed(2);
                 }
-                calculateGPA();
+            }
+            
+            function calculateAndDisplayGPA() {
+                const gpaData = calculateGPA();
+                updateGPADisplay(gpaData);
+                return gpaData;
             }
             
             function calculateGPA() {
                 let totalCredits = 0;
                 let totalGradePoints = 0;
+                let subjectsWithGrades = 0;
+                let subjectsWithoutGrades = 0;
                 
                 currentSubjects.forEach(subject => {
                     const grade = subject.grade;
@@ -625,14 +683,38 @@
                         
                         totalCredits += credits;
                         totalGradePoints += subjectGradePoints;
+                        subjectsWithGrades++;
+                    } else {
+                        subjectsWithoutGrades++;
                     }
                 });
                 
                 const gpa = totalCredits > 0 ? (totalGradePoints / totalCredits) : 0;
                 
+                return { 
+                    totalCredits, 
+                    totalGradePoints, 
+                    gpa,
+                    subjectsWithGrades,
+                    subjectsWithoutGrades,
+                    totalSubjects: currentSubjects.length
+                };
+            }
+            
+            function updateGPADisplay(gpaData) {
+                const { gpa, subjectsWithoutGrades, totalSubjects } = gpaData;
+                
+                // Update the GPA value
                 gpaResultEl.textContent = gpa.toFixed(2);
                 
-                return { totalCredits, totalGradePoints, gpa };
+                // Enable/disable save button based on status
+                if (totalSubjects === 0) {
+                    saveCgpaBtn.disabled = true;
+                } else if (subjectsWithoutGrades > 0) {
+                    saveCgpaBtn.disabled = true;
+                } else {
+                    saveCgpaBtn.disabled = false;
+                }
             }
             
             function calculateCGPA() {
@@ -678,14 +760,18 @@
                     return;
                 }
                 
-                // Determine trimester number
-                const trimesterNumber = cgpaHistory.length + 1;
+                // Get the current trimester number from dropdown
+                const trimesterNumber = trimesterSelect.value;
                 const trimesterName = `Trimester ${trimesterNumber}`;
                 
                 // Prepare data for database save
                 const saveData = {
                     trimester: trimesterName,
-                    gpa: currentSemester.gpa
+                    gpa: currentSemester.gpa,
+                    trimesterNumber: trimesterNumber,
+                    totalCredits: currentSemester.totalCredits,
+                    totalGradePoints: currentSemester.totalGradePoints,
+                    subjects: currentSubjects
                 };
                 
                 // Try to save to database
@@ -702,31 +788,43 @@
                         // Also save locally for immediate display
                         const semesterData = {
                             semester: trimesterName,
+                            trimesterNumber: trimesterNumber,
                             date: new Date().toLocaleDateString(),
                             totalCredits: currentSemester.totalCredits,
                             totalGradePoints: currentSemester.totalGradePoints,
-                            gpa: currentSemester.gpa
+                            gpa: currentSemester.gpa,
+                            subjects: currentSubjects
                         };
                         
-                        cgpaHistory.push(semesterData);
+                        // Check if this trimester already exists in history
+                        const existingIndex = cgpaHistory.findIndex(item => item.trimesterNumber === trimesterNumber);
+                        if (existingIndex !== -1) {
+                            // Update existing trimester
+                            cgpaHistory[existingIndex] = semesterData;
+                        } else {
+                            // Add new trimester
+                            cgpaHistory.push(semesterData);
+                        }
+                        
+                        // Sort by trimester number
+                        cgpaHistory.sort((a, b) => a.trimesterNumber - b.trimesterNumber);
+                        
                         updateCgpaHistoryDisplay();
                         calculateCGPA();
                         
-                        alert(`Trimester ${trimesterNumber} saved successfully to database!`);
+                        // Show success message with GPA
+                        alert(`Trimester ${trimesterNumber} saved successfully!\n\nGPA: ${currentSemester.gpa.toFixed(2)}\nSubjects: ${currentSemester.totalSubjects}\nCredits: ${currentSemester.totalCredits}`);
                         
                         // Reset for next trimester
-                        subjectsTbody.innerHTML = '';
-                        addedSubjectIds.clear();
-                        currentSubjects = [];
-                        subjectSelect.value = '';
-                        addSubjectBtn.disabled = true;
-                        gpaResultEl.textContent = '0.00';
-                        
-                        // Update trimester title
-                        const trimesterTitle = document.querySelector('h2');
-                        if (trimesterTitle) {
-                            trimesterTitle.textContent = `Trimester ${trimesterNumber + 1}`;
+                        // Auto-advance to next trimester if not the last one
+                        if (parseInt(trimesterNumber) < 6) {
+                            const nextTrimester = parseInt(trimesterNumber) + 1;
+                            trimesterSelect.value = nextTrimester.toString();
+                            resetTrimester();
+                        } else {
+                            resetTrimester();
                         }
+                        
                     } else {
                         alert('Failed to save to database: ' + (data.error || 'Unknown error'));
                     }
@@ -735,24 +833,47 @@
                     console.error('Database save error:', error);
                     
                     // Fallback to localStorage
-                    const localHistory = JSON.parse(localStorage.getItem('cgpaHistory')) || [];
                     const semesterData = {
                         semester: trimesterName,
+                        trimesterNumber: trimesterNumber,
                         date: new Date().toLocaleDateString(),
                         totalCredits: currentSemester.totalCredits,
                         totalGradePoints: currentSemester.totalGradePoints,
-                        gpa: currentSemester.gpa
+                        gpa: currentSemester.gpa,
+                        subjects: currentSubjects
                     };
                     
-                    localHistory.push(semesterData);
-                    localStorage.setItem('cgpaHistory', JSON.stringify(localHistory));
+                    // Check if this trimester already exists in history
+                    const existingIndex = cgpaHistory.findIndex(item => item.trimesterNumber === trimesterNumber);
+                    if (existingIndex !== -1) {
+                        // Update existing trimester
+                        cgpaHistory[existingIndex] = semesterData;
+                    } else {
+                        // Add new trimester
+                        cgpaHistory.push(semesterData);
+                    }
+                    
+                    // Sort by trimester number
+                    cgpaHistory.sort((a, b) => a.trimesterNumber - b.trimesterNumber);
+                    
+                    // Save to localStorage (optional - for persistence)
+                    // localStorage.setItem('cgpaHistory', JSON.stringify(cgpaHistory));
                     
                     // Update display
-                    cgpaHistory = localHistory;
                     updateCgpaHistoryDisplay();
                     calculateCGPA();
                     
-                    alert(`Trimester ${trimesterNumber} saved to browser storage! Database save failed.`);
+                    // Show success message with GPA
+                    alert(`Trimester ${trimesterNumber} saved!\n\nGPA: ${currentSemester.gpa.toFixed(2)}\nSubjects: ${currentSemester.totalSubjects}\nCredits: ${currentSemester.totalCredits}`);
+                    
+                    // Reset for next trimester
+                    if (parseInt(trimesterNumber) < 6) {
+                        const nextTrimester = parseInt(trimesterNumber) + 1;
+                        trimesterSelect.value = nextTrimester.toString();
+                        resetTrimester();
+                    } else {
+                        resetTrimester();
+                    }
                 });
             }
             
@@ -783,18 +904,19 @@
                     semesterGrades.style.textAlign = 'right';
                     semesterGrades.innerHTML = `
                         <div style="font-weight: bold;">GPA: ${semester.gpa.toFixed(2)}</div>
-                        <small>Credits: ${semester.totalCredits || 'N/A'}</small>
+                        <small>Credits: ${semester.totalCredits || 'N/A'}</small><br>
+                        <small>Subjects: ${semester.subjects ? semester.subjects.length : 'N/A'}</small>
                     `;
                     
                     const deleteBtn = document.createElement('button');
                     deleteBtn.className = 'action-btn';
-                    deleteBtn.innerHTML = '🗑️';
+                    deleteBtn.innerHTML = '×';
                     deleteBtn.title = 'Remove from history';
                     deleteBtn.style.marginLeft = '10px';
                     deleteBtn.onclick = function() {
-                        if (confirm('Remove this semester from history?')) {
+                        if (confirm('Remove this trimester from history?')) {
                             cgpaHistory.splice(index, 1);
-                            localStorage.setItem('cgpaHistory', JSON.stringify(cgpaHistory));
+                            // localStorage.setItem('cgpaHistory', JSON.stringify(cgpaHistory));
                             updateCgpaHistoryDisplay();
                             calculateCGPA();
                         }
@@ -818,13 +940,36 @@
                 subjectSelect.value = '';
                 addSubjectBtn.disabled = true;
                 
+                // Reset GPA display
                 gpaResultEl.textContent = '0.00';
+                saveCgpaBtn.disabled = true;
+            }
+            
+            function clearAllHistory() {
+                if (!confirm('Are you sure you want to clear ALL CGPA history? This action cannot be undone.')) {
+                    return;
+                }
+                
+                // Clear localStorage
+                localStorage.removeItem('cgpaHistory');
+                
+                // Clear cgpaHistory array
+                cgpaHistory = [];
+                
+                // Update displays
+                updateCgpaHistoryDisplay();
+                calculateCGPA();
+                
+                alert('All CGPA history has been cleared.');
             }
             
             function showError(message) {
                 errorMessage.textContent = message;
                 errorMessage.style.display = 'block';
             }
+            
+            // Initialize GPA display
+            calculateAndDisplayGPA();
         });
     </script>
 </body>
