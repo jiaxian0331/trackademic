@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <title>Trackademic - Study Planner & GPA Calculator</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 
 <body>
@@ -21,21 +20,13 @@
                     <h2>Subjects List</h2>
                 </div>
                 <div class="subject-list">
+                    <!-- DYNAMIC SUBJECTS FROM DATABASE -->
+                    {% for subject in subjects %}
                     <div class="subject-item">
-                        <span class="subject-name">Academic English</span>
-                        <span class="subject-code">LCE1113</span>
+                        <span class="subject-name">{{ subject.subject_name }}</span>
+                        <span class="subject-code">{{ subject.subject_code }}</span>
                     </div>
-                    <div class="subject-item">
-                        <span class="subject-name">Mathematics III</span>
-                        <span class="subject-code">CMT1134</span>
-                    </div>
-                    <div class="subject-item">
-                        <span class="subject-name">Mini IT Project</span>
-                        <span class="subject-code">CSP1124</span>
-                    </div>
-                    <button class="edit-btn">
-                        <span>+ Add Subject</span>
-                    </button>
+                    {% endfor %}
                 </div>
             </aside>
 
@@ -100,15 +91,12 @@
                     </button>
                 </div>
                 <div class="status-container">
-                    
                     <div class="status-list">
-                        
+                        <!-- Status content can be added here -->
                     </div>
                 </div>
             </aside>
         </div>
-
     </div>
-
 </body>
 </html>

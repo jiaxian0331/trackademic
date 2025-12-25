@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, url_for
+from flask import Flask, request, redirect, url_for, render_template
 import sqlite3
 import os
 
@@ -65,6 +65,11 @@ init_database()
 def home():
     return '''
     <h1>Trackademic Database</h1>
+
+    <h2>Application:</h2>
+    <ul>
+        <li><a href="/timetable">Go to Timetable</a></li>
+    </ul>
     
     <h2>View Data:</h2>
     <ul>
@@ -132,7 +137,7 @@ def add_subject():
             )
             conn.commit()
             conn.close()
-            return redirect('/subjects')
+            return redirect('/timetable')
         except Exception as e:
             return f'<h1>Failed to add subject: Subject already existed.</h1><p><a href="/add-subject">Try again</a></p>'
     
@@ -478,6 +483,13 @@ def reset_gpa():
     finally:
         if conn:
             conn.close()
+
+@app.route('/timetable')
+def timetable():
+    conn = get_db_connection()
+    subjects = conn.execute('SELECT * FROM subjects ORDER BY subject_id').fetchall()
+    conn.close()
+    return render_template('timetable.html', subjects=subjects)
 
 if __name__ == '__main__':
     app.run(debug=True)

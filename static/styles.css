@@ -45,7 +45,7 @@ header h1 {
 
 .main-layout {
     display: grid;
-    grid-template-columns: 250px 1fr 300px;
+    grid-template-columns: 280px 1fr 260px; 
     gap: 0;
     min-height: calc(100vh - 160px);
 }
@@ -54,7 +54,9 @@ header h1 {
     background: #f8fafc;
     border-right: 1px solid #e2e8f0;
     padding: 25px;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 160px); 
 }
 
 .middle-column {
@@ -107,6 +109,9 @@ header h1 {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 5px;
 }
 
 .subject-item {
