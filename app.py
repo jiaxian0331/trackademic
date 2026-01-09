@@ -1,8 +1,8 @@
-from flask import Flask, request, redirect, url_for, render_template
+from flask import Flask, request, redirect, url_for, render_template, session
 import sqlite3
-import os
 
 app = Flask(__name__)
+app.secret_key = 'your_secret_key_here'  # Required for sessions
 
 def get_db_connection():
     try:
@@ -25,6 +25,17 @@ def init_database():
         subject_name TEXT NOT NULL UNIQUE,
         subject_code TEXT UNIQUE,
         credit_hours INTEGER DEFAULT 3
+    )
+    ''')
+    
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS timetable (
+        timetable_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        subject_id INTEGER NOT NULL,
+        day INTEGER NOT NULL,
+        time_slot TEXT NOT NULL,
+        FOREIGN KEY (subject_id) REFERENCES subjects(subject_id),
+        UNIQUE(day, time_slot)
     )
     ''')
     
@@ -99,7 +110,7 @@ def list_subjects():
             return '<h1>No subjects found.</h1><p><a href="/reset-subjects">Reset subjects database</a></p>'
         
         html = '<h1>All Subjects</h1>'
-        html += '<p><a href="/add-subject" >+ Add New Subject</a></p>'
+        html += '<p><a href="/add-subject-form-db">+ Add New Subject</a></p>'
         html += '<table border="1">'
         html += '<tr><th>ID</th><th>Code</th><th>Subject Name</th><th>Credit Hours</th><th>Actions</th></tr>'
         
@@ -121,10 +132,9 @@ def list_subjects():
     except Exception as e:
         return f'<h1>Error accessing database: {str(e)}</h1>'
 
-@app.route('/add-subject', methods=['GET', 'POST'])
-def add_subject():
+@app.route('/add-subject-form-db', methods=['GET', 'POST'])
+def add_subject_form_db():
     if request.method == 'POST':
-
         subject_name = request.form['subject_name']
         subject_code = request.form['subject_code']
         credit_hours = request.form['credit_hours']
@@ -137,9 +147,9 @@ def add_subject():
             )
             conn.commit()
             conn.close()
-            return redirect('/timetable')
+            return redirect('/subjects')
         except Exception as e:
-            return f'<h1>Failed to add subject: Subject already existed.</h1><p><a href="/add-subject">Try again</a></p>'
+            return f'<h1>Failed to add subject: {str(e)}</h1><p><a href="/add-subject-form-db">Try again</a></p>'
     
     return '''
     <h1>Add New Subject</h1>
@@ -486,10 +496,135 @@ def reset_gpa():
 
 @app.route('/timetable')
 def timetable():
+    """View timetable in non-edit mode"""
+    conn = get_db_connection()
+    timetable_data = conn.execute('''
+        SELECT t.*, s.subject_name, s.subject_code
+        FROM timetable t 
+        JOIN subjects s ON t.subject_id = s.subject_id
+        ORDER BY t.day, t.time_slot
+    ''').fetchall()
+    
+    schedule = {}
+    for item in timetable_data:
+        day = item['day']
+        time_slot = item['time_slot']
+        if day not in schedule:
+            schedule[day] = {}
+        schedule[day][time_slot] = {
+            'subject_name': item['subject_name'],
+            'subject_code': item['subject_code'],
+            'time_slot': time_slot
+        }
+    conn.close()
+    
+    return render_template('timetable.html', schedule=schedule, edit_mode=False)
+
+@app.route('/edit_timetable')
+def edit_timetable():
+    """Enter edit mode"""
+    conn = get_db_connection()
+    subjects = conn.execute('SELECT * FROM subjects ORDER BY subject_id').fetchall()
+    
+    timetable_data = conn.execute('''
+        SELECT t.*, s.subject_name, s.subject_code
+        FROM timetable t 
+        JOIN subjects s ON t.subject_id = s.subject_id
+        ORDER BY t.day, t.time_slot
+    ''').fetchall()
+    
+    schedule = {}
+    for item in timetable_data:
+        day = item['day']
+        time_slot = item['time_slot']
+        if day not in schedule:
+            schedule[day] = {}
+        schedule[day][time_slot] = {
+            'subject_name': item['subject_name'],
+            'subject_code': item['subject_code'],
+            'time_slot': time_slot
+        }
+    conn.close()
+
+    return render_template('timetable.html', subjects=subjects, schedule=schedule, edit_mode=True)
+
+@app.route('/add_subject_form')
+def add_subject_form():
+    """Show form to add a subject to timetable"""
+    day = int(request.args.get('day', 0))
+    
     conn = get_db_connection()
     subjects = conn.execute('SELECT * FROM subjects ORDER BY subject_id').fetchall()
     conn.close()
-    return render_template('timetable.html', subjects=subjects)
+    
+    return render_template('add_subject.html', subjects=subjects, day=day)
 
+@app.route('/add_timetable', methods=['POST'])
+def add_timetable():
+    """Add a subject to the timetable database"""
+    day = int(request.form.get('day', 0))
+    time = request.form.get('time', '').strip()
+    subject_id = int(request.form.get('subject_id', 0))
+    
+    if not time:
+        return '<h1>Time is required!</h1><p><a href="/edit_timetable">Go back</a></p>'
+    
+    try:
+        conn = get_db_connection()
+        existing = conn.execute(
+            'SELECT * FROM timetable WHERE day = ? AND time_slot = ?',
+            (day, time)
+        ).fetchone()
+        
+        if existing:
+            conn.close()
+            return f'<h1>Time slot already taken!</h1><p><a href="/edit_timetable">Go back</a></p>'
+        
+        conn.execute(
+            'INSERT INTO timetable (subject_id, day, time_slot) VALUES (?, ?, ?)',
+            (subject_id, day, time)
+        )
+        conn.commit()
+        conn.close()
+        
+        return redirect('/edit_timetable')
+    
+    except Exception as e:
+        return f'<h1>Error adding to timetable: {str(e)}</h1><p><a href="/edit_timetable">Go back</a></p>'
+
+@app.route('/remove_timetable', methods=['POST'])
+def remove_timetable():
+    """Remove a subject from timetable database"""
+    day = int(request.form.get('day', 0))
+    time = request.form.get('time', '')
+    
+    try:
+        conn = get_db_connection()
+        conn.execute(
+            'DELETE FROM timetable WHERE day = ? AND time_slot = ?',
+            (day, time)
+        )
+        conn.commit()
+        conn.close()
+        
+        return redirect('/edit_timetable')
+    
+    except Exception as e:
+        return f'<h1>Error removing from timetable: {str(e)}</h1><p><a href="/edit_timetable">Go back</a></p>'
+
+@app.route('/clear_timetable', methods=['POST'])
+def clear_timetable():
+    """Clear all timetable data"""
+    try:
+        conn = get_db_connection()
+        conn.execute('DELETE FROM timetable')
+        conn.commit()
+        conn.close()
+        
+        return redirect('/edit_timetable')
+    
+    except Exception as e:
+        return f'<h1>Error clearing timetable: {str(e)}</h1><p><a href="/edit_timetable">Go back</a></p>'
+    
 if __name__ == '__main__':
     app.run(debug=True)

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Trackademic - Study Planner & GPA Calculator</title>
+    <title>Trackademic - Study Planner</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 
@@ -14,29 +14,20 @@
         </header>
 
         <div class="main-layout">
-
-            <aside class="left-column">
-                <div class="section-header">
-                    <h2>Subjects List</h2>
-                </div>
-                <div class="subject-list">
-                    <!-- DYNAMIC SUBJECTS FROM DATABASE -->
-                    {% for subject in subjects %}
-                    <div class="subject-item">
-                        <span class="subject-name">{{ subject.subject_name }}</span>
-                        <span class="subject-code">{{ subject.subject_code }}</span>
-                    </div>
-                    {% endfor %}
-                </div>
-            </aside>
-
             <main class="middle-column">
                 <div class="section-header">
-                    <h2>Weekly Schedule</h2>
-                    <button class="edit-btn">
-                        <span>Edit Schedule</span>
-                    </button>
+                    <h2 class="schedule-title">Weekly Schedule</h2>
+                    {% if edit_mode %}
+                    <form method="GET" action="{{ url_for('timetable') }}">
+                        <button type="submit" class="edit-btn">View Mode</button>
+                    </form>
+                    {% else %}
+                    <form method="GET" action="{{ url_for('edit_timetable') }}">
+                        <button type="submit" class="edit-btn">Edit Schedule</button>
+                    </form>
+                    {% endif %}
                 </div>
+                
                 <section class="planner-table">
                     <table>
                         <thead>
@@ -52,48 +43,73 @@
                         </thead>
                         <tbody>
                             <tr>
-                                <td>2:00 PM<br>Maths</td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
+                                {% for day in range(7) %}
+                                <td class="schedule-column">
+                                    <div class="schedule-grid">
+                                        {% if schedule.get(day) %}
+                                            {% for time_slot, subject_data in schedule[day].items() %}
+                                            <div class="schedule-cell filled">
+                                                <div class="cell-content">
+                                                    {% if not edit_mode %}
+                                                    <div class="cell-time">{{ time_slot }}</div>
+                                                    {% endif %}
+                                                    <div class="cell-subject">{{ subject_data.subject_name }}</div>
+                                                    <div class="cell-code">{{ subject_data.subject_code }}</div>
+                                                    {% if edit_mode %}
+                                                    <form method="POST" action="{{ url_for('remove_timetable') }}" class="remove-form">
+                                                        <input type="hidden" name="day" value="{{ day }}">
+                                                        <input type="hidden" name="time" value="{{ time_slot }}">
+                                                        <button type="submit" class="remove-btn" title="Remove">x</button>
+                                                    </form>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <div class="schedule-cell empty">
+                                                <div class="empty-state">
+                                                    <span class="empty-text">No classes scheduled</span>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                        
+                                        {% if edit_mode %}
+                                        <div class="schedule-cell empty-cell">
+                                            <form method="GET" action="{{ url_for('add_subject_form') }}" class="add-form">
+                                                <input type="hidden" name="day" value="{{ day }}">
+                                                <input type="hidden" name="time" value="">
+                                                <button type="submit" class="add-box-btn">
+                                                    <div class="add-box-content">
+                                                        <span class="plus-icon">+</span>
+                                                        <span class="add-text">Add Subject</span>
+                                                    </div>
+                                                </button>
+                                            </form>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                {% endfor %}
                             </tr>
                         </tbody>
                     </table>
+                    
+                    {% if edit_mode %}
+                    <div class="edit-actions">
+                        <form method="GET" action="{{ url_for('timetable') }}">
+                            <button type="submit" class="save-btn">Save & Exit</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('clear_timetable') }}">
+                            <button type="submit" class="clear-btn" onclick="return confirm('Clear all scheduled subjects?')">Clear All</button>
+                        </form>
+                    </div>
+                    {% endif %}
                 </section>
             </main>
 
             <aside class="right-column">
                 <div class="section-header">
-                    <h2>Completion Status</h2>
-                    <button class="edit-btn">
-                        <span>Update</span>
-                    </button>
-                </div>
-                <div class="status-container">
-                    <div class="status-list">
-                        <!-- Status content can be added here -->
-                    </div>
+                    <h2 class="schedule-title">Summary</h2>
                 </div>
             </aside>
         </div>
