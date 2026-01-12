@@ -563,17 +563,35 @@ def add_subject_form():
 def add_timetable():
     """Add a subject to the timetable database"""
     day = int(request.form.get('day', 0))
-    time = request.form.get('time', '').strip()
+    start_time = request.form.get('start_time', '').strip()
+    end_time = request.form.get('end_time', '').strip()
     subject_id = int(request.form.get('subject_id', 0))
     
-    if not time:
-        return '<h1>Time is required!</h1><p><a href="/edit_timetable">Go back</a></p>'
+    if not start_time or not end_time:
+        return '<h1>Both start and end times are required!</h1><p><a href="/edit_timetable">Go back</a></p>'
+    
+    # Validate that end time is not earlier than start time
+    if not is_valid_time_range(start_time, end_time):
+        # Get the day name for better error message
+        day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        day_name = day_names[day] if day < len(day_names) else f'Day {day+1}'
+        
+        error_html = f'''
+        <h1>Invalid Time Selection!</h1>
+        <p>End time ({end_time}) cannot be earlier than or equal to start time ({start_time}).</p>
+        <p><a href="/add_subject_form?day={day}">Go back and correct the times</a> | 
+           <a href="/edit_timetable">Return to timetable</a></p>
+        '''
+        return error_html
+    
+    # Combine start and end time into a single time slot string
+    time_slot = f"{start_time} - {end_time}"
     
     try:
         conn = get_db_connection()
         existing = conn.execute(
             'SELECT * FROM timetable WHERE day = ? AND time_slot = ?',
-            (day, time)
+            (day, time_slot)
         ).fetchone()
         
         if existing:
@@ -582,7 +600,7 @@ def add_timetable():
         
         conn.execute(
             'INSERT INTO timetable (subject_id, day, time_slot) VALUES (?, ?, ?)',
-            (subject_id, day, time)
+            (subject_id, day, time_slot)
         )
         conn.commit()
         conn.close()
@@ -591,6 +609,50 @@ def add_timetable():
     
     except Exception as e:
         return f'<h1>Error adding to timetable: {str(e)}</h1><p><a href="/edit_timetable">Go back</a></p>'
+
+def is_valid_time_range(start_time_str, end_time_str):
+    """Helper function to validate if end time is after start time"""
+    # Convert time strings to minutes since midnight for comparison
+    def time_to_minutes(time_str):
+        # Parse time string like "8:00 AM" or "1:30 PM"
+        try:
+            # Remove spaces and split
+            time_str = time_str.strip().upper()
+            
+            # Split time and AM/PM
+            if " AM" in time_str:
+                time_part = time_str.replace(" AM", "")
+                is_pm = False
+            elif " PM" in time_str:
+                time_part = time_str.replace(" PM", "")
+                is_pm = True
+            else:
+                return 0
+            
+            # Split hours and minutes
+            if ":" in time_part:
+                hours_str, minutes_str = time_part.split(":")
+                hours = int(hours_str)
+                minutes = int(minutes_str)
+            else:
+                hours = int(time_part)
+                minutes = 0
+            
+            # Convert 12-hour to 24-hour format
+            if is_pm and hours != 12:
+                hours += 12
+            elif not is_pm and hours == 12:
+                hours = 0
+            
+            return hours * 60 + minutes
+        except:
+            return 0
+    
+    start_minutes = time_to_minutes(start_time_str)
+    end_minutes = time_to_minutes(end_time_str)
+    
+    # End time must be after start time
+    return end_minutes > start_minutes
 
 @app.route('/remove_timetable', methods=['POST'])
 def remove_timetable():
