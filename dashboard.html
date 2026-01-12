@@ -42,23 +42,30 @@
 
                     {% if filename %}
                         {% if filename.endswith(('.png', '.jpg', '.jpeg', '.gif')) %}
-                            <img src="{{ url_for('static', filename='uploads/' ~ filename) }}" alt="Post image">
+                            <img src="{{ url_for('static', filename='uploads/' ~ filename) }}" alt="Post image" style="max-width:100%;">
                         {% else %}
                             <p>File: <a href="{{ url_for('static', filename='uploads/' ~ filename) }}">{{ filename }}</a></p>
                         {% endif %}
                     {% endif %}
 
-                    <div class="post-actions">
+                    <div class="post-actions" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee;">
                         {% if post_user_id == session['user_id'] %}
-                        <form action="{{ url_for('delete_post', post_id=post_id) }}" method="POST">
+                        <form action="{{ url_for('delete_post', post_id=post_id) }}" method="POST" style="display:inline;">
                             <button type="submit">Delete</button>
                         </form>
                         {% endif %}
 
                         {% if is_saved %}
-                            <button disabled>Saved</button>
+                            <button disabled style="background:#ccc;">Saved</button>
                         {% else %}
-                            <form action="{{ url_for('save_post', post_id=post_id) }}" method="POST">
+                            <form action="{{ url_for('save_post', post_id=post_id) }}" method="POST" style="display:inline-block; margin-left:10px;">
+                                <select name="folder_id" style="padding: 2px;">
+                                    <option value="">-- Save to Folder --</option>
+                                    {% for f_id, f_name in folders %}
+                                        <option value="{{ f_id }}">{{ f_name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <input type="text" name="new_folder_name" placeholder="Or new folder..." style="padding: 2px; width: 100px;">
                                 <button type="submit">Save</button>
                             </form>
                         {% endif %}
