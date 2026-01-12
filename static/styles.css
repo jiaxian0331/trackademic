@@ -1,0 +1,607 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background: linear-gradient(#ffffff 0%, #adffe1 100%);
+    color: #333;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    min-height: 90vh;
+    overflow-x: hidden; /* Prevent horizontal scroll on container */
+}
+
+header {
+    background: linear-gradient(to right, #607dff, #ffffff);
+    color: rgb(0, 0, 0);
+    padding: 30px;
+    text-align: center;
+}
+
+header h1 {
+    font-size: 2.8rem;
+    margin-bottom: 10px;
+}
+
+.subtitle {
+    font-size: 1.2rem;
+    opacity: 0.9;
+    margin-bottom: 25px;
+}
+
+.main-layout {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: 0;
+    min-height: calc(100vh - 160px);
+}
+
+.middle-column {
+    padding: 25px;
+    overflow-y: auto;
+}
+
+.right-column {
+    background: #f8fafc;
+    border-left: 1px solid #e2e8f0;
+    padding: 25px;
+    width: 350px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.section-header h2 {
+    font-size: 1.3rem;
+    color: #2d3748;
+    font-weight: 600;
+}
+
+.edit-btn {
+    background: #4a00e0;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 50px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.edit-btn:hover {
+    background: #3800b3;
+}
+
+.planner-table {
+    padding: 0;
+    overflow-x: auto; /* Allow scroll only if absolutely necessary */
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed; /* Fixed layout for consistent column widths */
+}
+
+th {
+    padding: 12px 8px; /* Reduced padding */
+    text-align: center;
+    color: #555;
+    border-bottom: 2px solid #ddd;
+    background: #f8f9fa;
+    font-size: 0.9rem; /* Slightly smaller font */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.schedule-column {
+    vertical-align: top;
+    padding: 8px; /* Reduced padding */
+    min-width: 140px; /* Reduced from 160px */
+    max-width: 140px; /* Limit maximum width */
+    min-height: 300px; /* Minimum height for consistency */
+    width: 14.28%; /* Each column takes equal 1/7th of table width */
+}
+
+/* NEW: Schedule Grid Container */
+.schedule-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* Reduced gap */
+    min-height: 200px;
+}
+
+.schedule-cell {
+    min-height: 70px; /* Reduced from 80px */
+    padding: 10px; /* Reduced padding */
+    border: 1px solid #e2e8f0;
+    border-radius: 6px; /* Slightly smaller radius */
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.schedule-cell.filled {
+    background: #e6f7ff;
+    border-color: #91d5ff;
+    justify-content: flex-start;
+}
+
+.schedule-cell.empty {
+    background: #f8f9fa;
+    border-color: #e9ecef;
+    color: #6c757d;
+}
+
+.schedule-cell.empty .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px; /* Reduced gap */
+}
+
+.schedule-cell.empty .empty-text {
+    font-size: 0.8rem; /* Slightly smaller */
+    color: #6c757d;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.empty-cell {
+    background: #f8fafc;
+    border: 2px dashed #e2e8f0;
+}
+
+.cell-content {
+    position: relative;
+    width: 100%;
+}
+
+.cell-time {
+    font-size: 0.75rem; /* Slightly smaller */
+    color: #607dff;
+    font-weight: bold;
+    margin-bottom: 4px; /* Reduced margin */
+    padding: 2px 4px; /* Reduced padding */
+    background: rgba(96, 125, 255, 0.1);
+    border-radius: 3px;
+    display: inline-block;
+}
+
+.cell-subject {
+    font-weight: 600;
+    font-size: 0.85rem; /* Slightly smaller */
+    color: #333;
+    margin-bottom: 3px; /* Reduced margin */
+    line-height: 1.2;
+    word-break: break-word; /* Allow long words to break */
+}
+
+.cell-code {
+    font-size: 0.7rem; /* Slightly smaller */
+    color: #666;
+    background: #f0f0f0;
+    padding: 1px 4px; /* Reduced padding */
+    border-radius: 2px;
+    display: inline-block;
+}
+
+.empty-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.add-cell-btn {
+    background: transparent;
+    border: 2px dashed #607dff;
+    color: #607dff;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+}
+
+.add-cell-btn:hover {
+    background: #607dff;
+    color: white;
+}
+
+.remove-form {
+    position: absolute;
+    top: 6px; /* Adjusted position */
+    right: 6px; /* Adjusted position */
+}
+
+.remove-btn {
+    background: #ff4d4f;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 18px; /* Slightly smaller */
+    height: 18px; /* Slightly smaller */
+    font-size: 0.65rem; /* Slightly smaller */
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.3s;
+}
+
+.remove-btn:hover {
+    opacity: 1;
+}
+
+.edit-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.save-btn, .clear-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.save-btn {
+    background: #00b894;
+    color: white;
+}
+
+.save-btn:hover {
+    background: #00a085;
+}
+
+.clear-btn {
+    background: #ff7675;
+    color: white;
+}
+
+.clear-btn:hover {
+    background: #e66767;
+}
+
+.status-info h3 {
+    color: #2d3748;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+}
+
+.today-schedule {
+    list-style: none;
+    padding: 0;
+}
+
+.today-schedule li {
+    padding: 10px;
+    margin-bottom: 8px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.schedule-time {
+    font-weight: bold;
+    color: #607dff;
+    font-size: 0.9rem;
+}
+
+.schedule-subject {
+    font-size: 0.85rem;
+    color: #4a5568;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-container {
+    background: white;
+    border-radius: 12px;
+    width: 500px;
+    max-width: 90%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+    background: linear-gradient(to right, #607dff, #8ea4ff);
+    color: white;
+    padding: 20px;
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.close-btn {
+    color: white;
+    font-size: 28px;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.close-btn:hover {
+    color: #f0f0f0;
+}
+
+.modal-body {
+    padding: 30px;
+}
+
+.subject-form {
+    margin-top: 20px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #607dff;
+}
+
+textarea.form-control {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.cancel-btn, .submit-btn {
+    padding: 12px 24px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.cancel-btn {
+    border: 2px solid #e2e8f0;
+    color: #4a5568;
+}
+
+.cancel-btn:hover {
+    background: #f7fafc;
+    border-color: #cbd5e0;
+}
+
+.submit-btn {
+    background: #00b894;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.submit-btn:hover {
+    background: #00a085;
+}
+
+.day-display {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #607dff;
+    margin-bottom: 20px;
+}
+
+.time-hint {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 5px;
+}
+
+.schedule-title {
+    font-size: 1.3rem; 
+    color: #2d3748;
+    margin: 0;
+}
+
+.add-form {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.add-box-btn {
+    width: 100%;
+    height: 100%;
+    min-height: 70px; /* Reduced from 80px */
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 15px; /* Reduced padding */
+    transition: all 0.3s;
+}
+
+.add-box-btn:hover {
+    background: #f0f7ff;
+    border-color: #607dff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(96, 125, 255, 0.1);
+}
+
+.add-box-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px; /* Reduced gap */
+    color: #607dff;
+}
+
+.plus-icon {
+    font-size: 1.6rem; /* Slightly smaller */
+    font-weight: bold;
+    line-height: 1;
+}
+
+.add-text {
+    font-size: 0.85rem; /* Slightly smaller */
+    font-weight: 500;
+}
+
+.add-cell-btn {
+    display: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+    .main-layout {
+        grid-template-columns: 1fr;
+    }
+    
+    .right-column {
+        width: 100%;
+        border-left: none;
+        border-top: 1px solid #e2e8f0;
+    }
+    
+    .schedule-column {
+        min-width: 130px; /* Even smaller on smaller screens */
+        max-width: 130px;
+    }
+    
+    th {
+        font-size: 0.85rem; /* Smaller font on smaller screens */
+        padding: 10px 6px;
+    }
+}
+
+@media (max-width: 992px) {
+    .schedule-column {
+        min-width: 120px;
+        max-width: 120px;
+    }
+    
+    th {
+        font-size: 0.8rem;
+    }
+    
+    .cell-subject {
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        border-radius: 15px;
+    }
+    
+    header h1 {
+        font-size: 2.2rem;
+    }
+    
+    .main-layout {
+        min-height: calc(100vh - 140px);
+    }
+    
+    .planner-table {
+        overflow-x: auto; /* Allow horizontal scroll on mobile if needed */
+    }
+}
+
+/* Time Selection Styles */
+.time-selection {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.time-group {
+    margin-bottom: 0;
+}
+
+.time-group label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #4a5568;
+    margin-bottom: 6px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    background-color: white;
+    cursor: pointer;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #607dff;
+    box-shadow: 0 0 0 3px rgba(96, 125, 255, 0.1);
+}
+
+select.form-control {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234a5568' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 40px;
+}
