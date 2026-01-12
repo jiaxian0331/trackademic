@@ -43,15 +43,26 @@ def init_db():
     """)
 
     db.execute("""
+        CREATE TABLE IF NOT EXISTS folders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            folder_name TEXT,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+    """)
+
+    db.execute("""
         CREATE TABLE IF NOT EXISTS saved_posts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
             post_id INTEGER,
+            folder_id INTEGER,
             FOREIGN KEY(user_id) REFERENCES users(id),
-            FOREIGN KEY(post_id) REFERENCES posts(id)
+            FOREIGN KEY(post_id) REFERENCES posts(id),
+            FOREIGN KEY(folder_id) REFERENCES folders(id)
         )
     """)
-
+    db.commit()
     db.close()
 
 init_db()
@@ -79,17 +90,13 @@ def signup():
 
         db = sqlite3.connect("database.db")
         try:
-            db.execute(
-                "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
-                (username, email, password)
-            )
+            db.execute("INSERT INTO users (username, email, password) VALUES (?, ?, ?)", (username, email, password))
             db.commit()
         except sqlite3.IntegrityError:
             db.close()
             return render_template("signup.html", error="Email already exists.")
         db.close()
         return redirect("/login")
-
     return render_template("signup.html")
 
 @app.route("/login", methods=["GET", "POST"])
@@ -99,10 +106,7 @@ def login():
         password = request.form["password"]
 
         db = sqlite3.connect("database.db")
-        cursor = db.execute(
-            "SELECT * FROM users WHERE email=? AND password=?",
-            (email, password)
-        )
+        cursor = db.execute("SELECT * FROM users WHERE email=? AND password=?", (email, password))
         user = cursor.fetchone()
         db.close()
 
@@ -112,7 +116,6 @@ def login():
             return redirect("/dashboard")
         else:
             return render_template("login.html", error="Wrong email or password.")
-
     return render_template("login.html")
 
 @app.route("/logout")
@@ -132,63 +135,104 @@ def dashboard():
         content = request.form.get("content")
         file = request.files.get("file")
         filename = None
-
         if file and file.filename:
             filename = file.filename
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
         db = sqlite3.connect("database.db")
-        db.execute(
-            "INSERT INTO posts (user_id, content, filename) VALUES (?, ?, ?)",
-            (user_id, content, filename)
-        )
+        db.execute("INSERT INTO posts (user_id, content, filename) VALUES (?, ?, ?)", (user_id, content, filename))
         db.commit()
         db.close()
-
         return redirect("/dashboard")
 
     db = sqlite3.connect("database.db")
+    cursor = db.execute("SELECT id, folder_name FROM folders WHERE user_id=?", (user_id,))
+    folders = cursor.fetchall()
+
     cursor = db.execute("""
         SELECT 
-            posts.id, 
-            posts.content, 
-            posts.filename, 
-            users.username,
-            posts.user_id,
-            EXISTS(
-                SELECT 1 FROM saved_posts 
-                WHERE saved_posts.post_id = posts.id AND saved_posts.user_id = ?
-            ) AS is_saved
+            posts.id, posts.content, posts.filename, users.username, posts.user_id,
+            EXISTS(SELECT 1 FROM saved_posts WHERE post_id = posts.id AND user_id = ?)
         FROM posts 
         JOIN users ON posts.user_id = users.id
         ORDER BY posts.id DESC
     """, (user_id,))
     posts = cursor.fetchall()
+    
     posts_with_comments = []
-
     for post in posts:
         comments = get_comments_for_post(post[0])
         posts_with_comments.append((*post, comments))
 
     db.close()
-    return render_template("dashboard.html", username=username, posts=posts_with_comments)
+    return render_template("dashboard.html", username=username, posts=posts_with_comments, folders=folders)
+
+@app.route("/save_post/<int:post_id>", methods=["POST"])
+def save_post(post_id):
+    if "user_id" not in session: return redirect("/login")
+    
+    user_id = session["user_id"]
+    folder_id = request.form.get("folder_id")
+    new_folder_name = request.form.get("new_folder_name")
+
+    db = sqlite3.connect("database.db")
+
+    if new_folder_name and new_folder_name.strip():
+        cursor = db.execute("INSERT INTO folders (user_id, folder_name) VALUES (?, ?)", 
+                            (user_id, new_folder_name.strip()))
+        folder_id = cursor.lastrowid
+    
+    if folder_id:
+        db.execute("INSERT INTO saved_posts (user_id, post_id, folder_id) VALUES (?, ?, ?)", 
+                   (user_id, post_id, folder_id))
+        db.commit()
+    db.close()
+    return redirect("/dashboard")
+
+@app.route("/saved")
+def saved_posts():
+    if "user_id" not in session: return redirect("/login")
+    user_id = session["user_id"]
+    db = sqlite3.connect("database.db")
+
+    cursor = db.execute("""
+        SELECT f.folder_name, p.content, p.filename, u.username, sp.id
+        FROM saved_posts sp
+        JOIN folders f ON sp.folder_id = f.id
+        JOIN posts p ON sp.post_id = p.id
+        JOIN users u ON p.user_id = u.id
+        WHERE sp.user_id = ?
+    """, (user_id,))
+    data = cursor.fetchall()
+    
+    organized = {}
+    for folder, content, file, poster, sp_id in data:
+        if folder not in organized: organized[folder] = []
+        organized[folder].append({'content': content, 'file': file, 'poster': poster, 'sp_id': sp_id})
+    db.close()
+    return render_template("saved.html", organized=organized, username=session["username"])
+
+@app.route("/unsave/<int:sp_id>", methods=["POST"])
+def unsave(sp_id):
+    if "user_id" not in session: return redirect("/login")
+    db = sqlite3.connect("database.db")
+    db.execute("DELETE FROM saved_posts WHERE id=? AND user_id=?", (sp_id, session["user_id"]))
+    db.commit()
+    db.close()
+    return redirect("/saved")
 
 @app.route("/delete_post/<int:post_id>", methods=["POST"])
 def delete_post(post_id):
-    if "user_id" not in session:
-        return redirect("/login")
-
+    if "user_id" not in session: return redirect("/login")
     user_id = session["user_id"]
     db = sqlite3.connect("database.db")
     cursor = db.execute("SELECT filename FROM posts WHERE id=? AND user_id=?", (post_id, user_id))
     result = cursor.fetchone()
-
     if result:
         filename = result[0]
         if filename:
             path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            if os.path.exists(path):
-                os.remove(path)
+            if os.path.exists(path): os.remove(path)
         db.execute("DELETE FROM posts WHERE id=? AND user_id=?", (post_id, user_id))
         db.execute("DELETE FROM comments WHERE post_id=?", (post_id,))
         db.execute("DELETE FROM saved_posts WHERE post_id=?", (post_id,))
@@ -198,82 +242,27 @@ def delete_post(post_id):
 
 @app.route("/comment/<int:post_id>", methods=["POST"])
 def add_comment(post_id):
-    if "user_id" not in session:
-        return redirect("/login")
-
+    if "user_id" not in session: return redirect("/login")
     comment_text = request.form.get("comment")
     if comment_text:
         db = sqlite3.connect("database.db")
-        db.execute(
-            "INSERT INTO comments (post_id, user_id, username, comment) VALUES (?, ?, ?, ?)",
-            (post_id, session["user_id"], session["username"], comment_text)
-        )
+        db.execute("INSERT INTO comments (post_id, user_id, username, comment) VALUES (?, ?, ?, ?)",
+                   (post_id, session["user_id"], session["username"], comment_text))
         db.commit()
         db.close()
     return redirect("/dashboard")
 
 @app.route("/delete_comment/<int:comment_id>", methods=["POST"])
 def delete_comment(comment_id):
-    if "user_id" not in session:
-        return redirect("/login")
-
-    user_id = session["user_id"]
+    if "user_id" not in session: return redirect("/login")
     db = sqlite3.connect("database.db")
     cursor = db.execute("SELECT user_id FROM comments WHERE id=?", (comment_id,))
     result = cursor.fetchone()
-    if result and result[0] == user_id:
+    if result and result[0] == session["user_id"]:
         db.execute("DELETE FROM comments WHERE id=?", (comment_id,))
         db.commit()
     db.close()
     return redirect("/dashboard")
-
-@app.route("/save_post/<int:post_id>", methods=["POST"])
-def save_post(post_id):
-    if "user_id" not in session:
-        return redirect("/login")
-
-    user_id = session["user_id"]
-    db = sqlite3.connect("database.db")
-    cursor = db.execute("SELECT 1 FROM saved_posts WHERE user_id=? AND post_id=?", (user_id, post_id))
-    exists = cursor.fetchone()
-    if not exists:
-        db.execute("INSERT INTO saved_posts (user_id, post_id) VALUES (?, ?)", (user_id, post_id))
-        db.commit()
-    db.close()
-    return redirect("/dashboard")
-
-@app.route("/unsave_post/<int:post_id>", methods=["POST"])
-def unsave_post(post_id):
-    if "user_id" not in session:
-        return redirect("/login")
-
-    user_id = session["user_id"]
-    db = sqlite3.connect("database.db")
-    db.execute("DELETE FROM saved_posts WHERE user_id=? AND post_id=?", (user_id, post_id))
-    db.commit()
-    db.close()
-    return redirect("/saved")
-
-@app.route("/saved")
-def saved_posts():
-    if "user_id" not in session:
-        return redirect("/login")
-
-    user_id = session["user_id"]
-
-    db = sqlite3.connect("database.db")
-    cursor = db.execute("""
-        SELECT posts.id, posts.content, posts.filename, users.username
-        FROM posts
-        JOIN saved_posts ON posts.id = saved_posts.post_id
-        JOIN users ON posts.user_id = users.id
-        WHERE saved_posts.user_id = ?
-        ORDER BY saved_posts.id DESC
-    """, (user_id,))
-    posts = cursor.fetchall()
-    db.close()
-
-    return render_template("saved.html", posts=posts, username=session.get("username", "User"))
 
 if __name__ == "__main__":
     app.run(debug=True)
