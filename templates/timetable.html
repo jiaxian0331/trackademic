@@ -51,9 +51,14 @@
                                             <div class="schedule-cell filled">
                                                 <div class="cell-content">
                                                     {% if not edit_mode %}
-                                                    <div class="cell-time">{{ time_slot }}</div>
+                                                        <div class="cell-time">{{ time_slot }}</div>
                                                     {% endif %}
                                                     <div class="cell-subject">{{ subject_data.subject_name }}</div>
+                                                    {% if subject_data.task_description %}
+                                                    <div class="cell-task-description" style="font-size: 0.75rem; color: #666; margin-top: 2px;">
+                                                        {{ subject_data.task_description }}
+                                                    </div>
+                                                    {% endif %}
                                                     <div class="cell-code">{{ subject_data.subject_code }}</div>
                                                     {% if edit_mode %}
                                                     <form method="POST" action="{{ url_for('remove_timetable') }}" class="remove-form">
@@ -109,7 +114,57 @@
 
             <aside class="right-column">
                 <div class="section-header">
-                    <h2 class="schedule-title">Summary</h2>
+                    <h2 class="schedule-title">Weekly Summary</h2>
+                </div>
+
+                <div class="status-info">
+                    <h3>Today's Tasks</h3>
+                    {% if today_schedule %}
+                    <ul class="today-schedule">
+                        {% for item in today_schedule %}
+                        <li>
+                            <div>
+                                <span class="schedule-time">{{ item.time_slot }}</span>
+                                <div class="schedule-subject">{{ item.subject_name }}</div>
+                                {% if item.task_description %}
+                                <small style="color: #666; font-size: 0.8rem; margin-top: 3px; display: block;">
+                                    {{ item.task_description }}
+                                </small>
+                                {% endif %}
+                                <small style="color: #888; font-size: 0.75rem;">{{ item.subject_code }}</small>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p style="color: #666; font-style: italic; padding: 10px 0;">No tasks scheduled for today</p>
+                    {% endif %}
+
+                    <h3 style="margin-top: 25px;">Week Overview</h3>
+                    {% if weekly_summary %}
+                    <ul class="today-schedule">
+                        {% for item in weekly_summary %}
+                        <li>
+                            <div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span class="schedule-time">{{ ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][item.day] }}</span>
+                                    <span style="margin: 0 5px;">-</span>
+                                    <span class="schedule-time">{{ item.time_slot }}</span>
+                                </div>
+                                <div class="schedule-subject">{{ item.subject_name }}</div>
+                                {% if item.task_description %}
+                                <small style="color: #666; font-size: 0.8rem; margin-top: 3px; display: block;">
+                                    {{ item.task_description }}
+                                </small>
+                                {% endif %}
+                                <small style="color: #888; font-size: 0.75rem;">{{ item.subject_code }}</small>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p style="color: #666; font-style: italic; padding: 10px 0;">No tasks scheduled this week</p>
+                    {% endif %}
                 </div>
             </aside>
         </div>

@@ -15,7 +15,6 @@ def get_db_connection():
         return None
 
 def init_database():
-    """Create tables if they don't exist"""
     conn = sqlite3.connect('trackademic.db')
     cursor = conn.cursor()
     
@@ -34,10 +33,16 @@ def init_database():
         subject_id INTEGER NOT NULL,
         day INTEGER NOT NULL,
         time_slot TEXT NOT NULL,
+        task_description TEXT DEFAULT '',
         FOREIGN KEY (subject_id) REFERENCES subjects(subject_id),
         UNIQUE(day, time_slot)
     )
     ''')
+
+    try:
+        cursor.execute("ALTER TABLE subjects ADD COLUMN task_description TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass
     
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS user_data (
@@ -67,6 +72,12 @@ def init_database():
     )
     ''')
     
+    try:
+        cursor.execute("ALTER TABLE timetable ADD COLUMN task_description TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        # Column already exists, ignore the error
+        pass
+
     conn.commit()
     conn.close()
 
@@ -86,18 +97,56 @@ def home():
     <ul>
         <li><a href="/subjects">View All Subjects</a></li>
         <li><a href="/user">View All Users</a></li>
-        <li><a href="/notes">View All Notes</a></li>
         <li><a href="/gpa">View GPA Data</a></li>
     </ul>
-    
-    <h2>Reset Tables:</h2>
+
+    <h2>Reset Data:</h2>
     <ul>
-        <li><a href="/reset-subjects" onclick="return confirm('Reset Subjects table?')">Reset Subjects</a></li>
-        <li><a href="/reset-users" onclick="return confirm('Reset Users table?')">Reset Users</a></li>
-        <li><a href="/reset-notes" onclick="return confirm('Reset Notes table?')">Reset Notes</a></li>
-        <li><a href="/reset-gpa" onclick="return confirm('Reset GPA table?')">Reset GPA</a></li>
+        <li><a href="/create-subjects-db">Reset Subjects Database</a></li>
+        <li><a href="/create-user-db">Reset User Database</a></li>
+        <li><a href="/create-notes-db">Reset Notes Database</a></li>
+        <li><a href="/create-gpa-db">Reset GPA Database</a></li>
     </ul>
     '''
+
+def get_today_schedule():
+    """Get today's schedule based on current day of week"""
+    import datetime
+    
+    today = datetime.datetime.today().weekday()
+    
+    conn = get_db_connection()
+    today_schedule = conn.execute('''
+        SELECT t.time_slot, s.subject_name, s.subject_code, t.task_description
+        FROM timetable t 
+        JOIN subjects s ON t.subject_id = s.subject_id
+        WHERE t.day = ?
+        ORDER BY t.time_slot
+    ''', (today,)).fetchall()
+    
+    conn.close()
+    return today_schedule
+
+def get_weekly_summary():
+    """Get summary of all scheduled tasks for the week"""
+    conn = get_db_connection()
+    
+    weekly_summary = conn.execute('''
+        SELECT 
+            t.day,
+            t.time_slot,
+            s.subject_name,
+            s.subject_code,
+            t.task_description,
+            COUNT(*) as task_count
+        FROM timetable t 
+        JOIN subjects s ON t.subject_id = s.subject_id
+        GROUP BY t.day, s.subject_name
+        ORDER BY t.day, t.time_slot
+    ''').fetchall()
+    
+    conn.close()
+    return weekly_summary
 
 @app.route('/subjects')
 def list_subjects():
@@ -283,9 +332,9 @@ def list_gpa():
         conn.close()
         
         if not gpa:
-            return '<h1>No GPA data found.</h1><p><a href="/reset-gpa">Reset GPA database</a></p>'
+            return '<h1>No GPA found.</h1><p><a href="/create-gpa-db">Create database first</a></p>'
         
-        html = '<h1>All GPA Data</h1>'
+        html = '<h1>GPA Data</h1>'
         html += '<table border="1">'
         html += '<tr><th>ID</th><th>Trimester</th><th>GPA</th><th>Actions</th></tr>'
         
@@ -303,8 +352,8 @@ def list_gpa():
         html += '<p><a href="/">Back to Home</a></p>'
         return html
     except Exception as e:
-        return f'<h1>Error accessing database!</h1>'
-
+        return f'<h1>Error accessing database: {str(e)}</h1>'
+    
 @app.route('/delete-gpa/<int:trimester_id>')
 def delete_gpa(trimester_id):
     try:
@@ -312,194 +361,66 @@ def delete_gpa(trimester_id):
         conn.execute('DELETE FROM gpa WHERE trimester_id = ?', (trimester_id,))
         conn.commit()
         conn.close()
-        return f'<h1>GPA data deleted successfully!</h1><p><a href="/gpa">Back to GPA Data</a></p>'
+        return f'<h1>GPA deleted successfully!</h1><p><a href="/gpa">Back to GPA Data</a></p>'
     except Exception as e:
-        return f'<h1>Error deleting GPA data!</h1><p><a href="/gpa">Back to GPA Data</a></p>'
-    
-@app.route('/notes')
-def list_notes():
-    try:
-        conn = get_db_connection()
-        notes = conn.execute('''
-            SELECT n.note_id, n.subject_id, n.user_id, n.file_name, n.file, 
-                   s.subject_code, s.subject_name
-            FROM notes n
-            LEFT JOIN subjects s ON n.subject_id = s.subject_id
-            ORDER BY n.note_id
-        ''').fetchall()
-        conn.close()
-        
-        if not notes:
-            return '<h1>No notes found.</h1><p><a href="/reset-notes">Reset notes database</a></p>'
-        
-        html = '<h1>All Notes</h1>'
-        html += '<table border="1">'
-        html += '<tr><th>ID</th><th>Subject ID</th><th>Subject Code</th><th>Subject Name</th><th>User ID</th><th>File Name</th><th>File</th></tr>'
-        
-        for note in notes:
-            html += f'<tr>'
-            html += f'<td>{note["note_id"]}</td>'
-            html += f'<td>{note["subject_id"]}</td>'
-            html += f'<td>{note["subject_code"] if note["subject_code"] else "N/A"}</td>'
-            html += f'<td>{note["subject_name"] if note["subject_name"] else "N/A"}</td>'
-            html += f'<td>{note["user_id"]}</td>'
-            html += f'<td>{note["file_name"]}</td>'
-            html += f'<td>{"File attached" if note["file"] else "No file"}</td>'
-            html += f'</tr>'
-        
-        html += '</table>'
-        html += '<p><a href="/">Back to Home</a></p>'
-        return html
-    except Exception as e:
-        return f'<h1>Error accessing database: {str(e)}</h1>'
-    
-@app.route('/reset-subjects')
-def reset_subjects():
-    """Reset only the subjects table"""
-    conn = None
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("PRAGMA foreign_keys = OFF")
-        cursor.execute('DELETE FROM subjects')
-        
-        subjects = [
-            ('Introduction to Business Management', 'GNB1114', 4),
-            ('Introduction to Computing Technologies', 'CCT1114', 4),
-            ('Communicative English', 'LCE1113', 3),
-            ('Mathematics I', 'CMT1114', 4),
-            ('Problem Solving & Program Design', 'CSP1114', 4),
-            ('Essential English', 'LEE1113', 3),
-            ('Multimedia Fundamentals', 'CMF1114', 4),
-            ('Mathematics II', 'CMT1124', 4),
-            ('Critical Thinking', 'LCT1113', 3),
-            ('Introduction to Digital Systems', 'CDS1114', 4),
-            ('Academic English', 'LAE1113', 3),
-            ('Mathematics III', 'CMT1134', 4),
-            ('Principles of Physics', 'CPP1113', 3),
-            ('Mini IT Project', 'CSP1123', 3),
-        ]
-        
-        cursor.executemany(
-            'INSERT INTO subjects (subject_name, subject_code, credit_hours) VALUES (?, ?, ?)',
-            subjects
-        )
-        
-        cursor.execute("PRAGMA foreign_keys = ON")
-        
-        conn.commit()
-        return '<h1>Subjects table reset successfully!</h1><p><a href="/subjects">View Subjects</a> | <a href="/">Home</a></p>'
-    
-    except Exception as e:
-        if conn:
-            conn.rollback()
-        return f'<h1>Error resetting subjects: {str(e)}</h1>'
-    
-    finally:
-        if conn:
-            conn.close()
+        return f'<h1>Error deleting GPA! {str(e)}</h1><p><a href="/gpa">Back to GPA Data</a></p>'
 
-@app.route('/reset-users')
-def reset_users():
-    """Reset only the users table"""
-    conn = None
+@app.route('/create-subjects-db')
+def create_subjects_database_route():
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute('DELETE FROM user_data')
-        
-        user_data = [
-            ('jiaxian0331', 'hoejiaxian@gmail.com', 'jiaxian0000'),
-        ]
-        
-        cursor.executemany(
-            'INSERT INTO user_data (username, email, password) VALUES (?, ?, ?)',
-            user_data
-        )
-        
-        conn.commit()
-        return '<h1>Users table reset successfully!</h1><p><a href="/user">View Users</a> | <a href="/">Home</a></p>'
-    
+        import Databases.subjects
+        Databases.subjects.create_subjects_database()
+        return '''
+        <h1>Database created successfully!</h1>
+        <p><a href="/subjects">View Subjects</a></p>
+        <p><a href="/">Back to Home</a></p>
+        '''
     except Exception as e:
-        if conn:
-            conn.rollback()
-        return f'<h1>Error resetting users: {str(e)}</h1>'
+        return f'<h1>Error creating database! {str(e)}</h1>'
     
-    finally:
-        if conn:
-            conn.close()
-
-@app.route('/reset-notes')
-def reset_notes():
-    """Reset only the notes table"""
-    conn = None
+@app.route('/create-notes-db')
+def create_notes_database_route():
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("PRAGMA foreign_keys = OFF")
-        cursor.execute('DELETE FROM notes')
-        
-        notes = [
-            (1, 1, 'business_notes.pdf', None),
-            (2, 1, 'computing_notes.pdf', None),
-            (3, 1, 'english_notes.pdf', None),
-        ]
-        
-        cursor.executemany(
-            'INSERT INTO notes (subject_id, user_id, file_name, file) VALUES (?, ?, ?, ?)',
-            notes
-        )
-        
-        cursor.execute("PRAGMA foreign_keys = ON")
-        
-        conn.commit()
-        return '<h1>Notes table reset successfully!</h1><p><a href="/notes">View Notes</a> | <a href="/">Home</a></p>'
-    
+        import Databases.notes
+        Databases.notes.create_notes_database()
+        return '''
+        <h1>Database reset successfully!</h1>
+        <p><a href="/">Back to Home</a></p>
+        '''
     except Exception as e:
-        if conn:
-            conn.rollback()
-        return f'<h1>Error resetting notes: {str(e)}</h1>'
+        return f'<h1>Error creating database! {str(e)}</h1>'
     
-    finally:
-        if conn:
-            conn.close()
-
-@app.route('/reset-gpa')
-def reset_gpa():
-    """Reset only the GPA table"""
-    conn = None
+@app.route('/create-gpa-db')
+def create_gpa_database_route():
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute('DELETE FROM gpa')
-        
-        gpa = [
-            ('Trimester 2510', 3.73),
-        ]
-        
-        cursor.executemany(
-            'INSERT INTO gpa (trimester, gpa) VALUES (?, ?)',
-            gpa
-        )
-        
-        conn.commit()
-        return '<h1>GPA table reset successfully!</h1><p><a href="/gpa">View GPA</a> | <a href="/">Home</a></p>'
-    
+        import Databases.gpa
+        Databases.gpa.create_gpa_database()
+        return '''
+        <h1>Database reset successfully!</h1>
+        <p><a href="/">Back to Home</a></p>
+        '''
     except Exception as e:
-        if conn:
-            conn.rollback()
-        return f'<h1>Error resetting GPA: {str(e)}</h1>'
+        return f'<h1>Error creating database! {str(e)}</h1>'
     
-    finally:
-        if conn:
-            conn.close()
+@app.route('/create-user-db')
+def create_user_database_route():
+    try:
+        import Databases.user_data
+        Databases.user_data.create_user_database()
+        return '''
+        <h1>User database reset successfully!</h1>
+        <p><a href="/user">View Users</a></p>
+        <p><a href="/">Back to Home</a></p>
+        '''
+    except Exception as e:
+        return f'<h1>Error creating user database! {str(e)}</h1>'
 
 @app.route('/timetable')
 def timetable():
     """View timetable in non-edit mode"""
     conn = get_db_connection()
     timetable_data = conn.execute('''
-        SELECT t.*, s.subject_name, s.subject_code
+        SELECT t.*, s.subject_name, s.subject_code, t.task_description
         FROM timetable t 
         JOIN subjects s ON t.subject_id = s.subject_id
         ORDER BY t.day, t.time_slot
@@ -514,11 +435,20 @@ def timetable():
         schedule[day][time_slot] = {
             'subject_name': item['subject_name'],
             'subject_code': item['subject_code'],
-            'time_slot': time_slot
+            'time_slot': time_slot,
+            'task_description': item['task_description']  # ADD THIS
         }
+    
+    # Get today's schedule
+    today_schedule = get_today_schedule()
+    
+    # Get weekly summary
+    weekly_summary = get_weekly_summary()
+    
     conn.close()
     
-    return render_template('timetable.html', schedule=schedule, edit_mode=False)
+    return render_template('timetable.html', schedule=schedule, edit_mode=False, 
+                          today_schedule=today_schedule, weekly_summary=weekly_summary)
 
 @app.route('/edit_timetable')
 def edit_timetable():
@@ -527,7 +457,7 @@ def edit_timetable():
     subjects = conn.execute('SELECT * FROM subjects ORDER BY subject_id').fetchall()
     
     timetable_data = conn.execute('''
-        SELECT t.*, s.subject_name, s.subject_code
+        SELECT t.*, s.subject_name, s.subject_code, t.task_description
         FROM timetable t 
         JOIN subjects s ON t.subject_id = s.subject_id
         ORDER BY t.day, t.time_slot
@@ -542,11 +472,21 @@ def edit_timetable():
         schedule[day][time_slot] = {
             'subject_name': item['subject_name'],
             'subject_code': item['subject_code'],
-            'time_slot': time_slot
+            'time_slot': time_slot,
+            'task_description': item['task_description']  # ADD THIS
         }
+    
+    # Get today's schedule
+    today_schedule = get_today_schedule()
+    
+    # Get weekly summary
+    weekly_summary = get_weekly_summary()
+    
     conn.close()
 
-    return render_template('timetable.html', subjects=subjects, schedule=schedule, edit_mode=True)
+    return render_template('timetable.html', subjects=subjects, schedule=schedule, 
+                          edit_mode=True, today_schedule=today_schedule, 
+                          weekly_summary=weekly_summary)
 
 @app.route('/add_subject_form')
 def add_subject_form():
@@ -557,7 +497,14 @@ def add_subject_form():
     subjects = conn.execute('SELECT * FROM subjects ORDER BY subject_id').fetchall()
     conn.close()
     
-    return render_template('add_subject.html', subjects=subjects, day=day)
+    return render_template('add_subject.html', 
+                          subjects=subjects, 
+                          day=day,
+                          start_time=request.args.get('start_time', ''),
+                          end_time=request.args.get('end_time', ''),
+                          subject_id=request.args.get('subject_id', ''),
+                          task_description=request.args.get('task_description', ''),
+                          error_message=request.args.get('error_message', ''))
 
 @app.route('/add_timetable', methods=['POST'])
 def add_timetable():
@@ -565,30 +512,106 @@ def add_timetable():
     day = int(request.form.get('day', 0))
     start_time = request.form.get('start_time', '').strip()
     end_time = request.form.get('end_time', '').strip()
-    subject_id = int(request.form.get('subject_id', 0))
+    subject_id = request.form.get('subject_id', '')
+    custom_task = request.form.get('custom_task', '').strip()
+    task_description = request.form.get('task_description', '').strip()
     
     if not start_time or not end_time:
-        return '<h1>Both start and end times are required!</h1><p><a href="/edit_timetable">Go back</a></p>'
+        error_message = "Both start and end times are required!"
+        conn = get_db_connection()
+        subjects = conn.execute('SELECT * FROM subjects ORDER BY subject_id').fetchall()
+        conn.close()
+        
+        return render_template('add_subject.html', 
+                              subjects=subjects, 
+                              day=day,
+                              error_message=error_message,
+                              start_time=start_time,
+                              end_time=end_time,
+                              subject_id=subject_id,
+                              custom_task=custom_task,
+                              task_description=task_description)
     
     # Validate that end time is not earlier than start time
     if not is_valid_time_range(start_time, end_time):
-        # Get the day name for better error message
-        day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-        day_name = day_names[day] if day < len(day_names) else f'Day {day+1}'
+        error_message = f"End time ({end_time}) cannot be earlier than or equal to start time ({start_time})."
+        conn = get_db_connection()
+        subjects = conn.execute('SELECT * FROM subjects ORDER BY subject_id').fetchall()
+        conn.close()
         
-        error_html = f'''
-        <h1>Invalid Time Selection!</h1>
-        <p>End time ({end_time}) cannot be earlier than or equal to start time ({start_time}).</p>
-        <p><a href="/add_subject_form?day={day}">Go back and correct the times</a> | 
-           <a href="/edit_timetable">Return to timetable</a></p>
-        '''
-        return error_html
+        return render_template('add_subject.html', 
+                              subjects=subjects, 
+                              day=day,
+                              error_message=error_message,
+                              start_time=start_time,
+                              end_time=end_time,
+                              subject_id=subject_id,
+                              custom_task=custom_task,
+                              task_description=task_description)
+    
+    # Handle custom task
+    if subject_id == 'custom':
+        if not custom_task:
+            error_message = "Please enter a task name for the custom task."
+            conn = get_db_connection()
+            subjects = conn.execute('SELECT * FROM subjects ORDER BY subject_id').fetchall()
+            conn.close()
+            
+            return render_template('add_subject.html', 
+                                  subjects=subjects, 
+                                  day=day,
+                                  error_message=error_message,
+                                  start_time=start_time,
+                                  end_time=end_time,
+                                  subject_id=subject_id,
+                                  custom_task=custom_task,
+                                  task_description=task_description)
+        
+        # Create a temporary subject for the custom task
+        conn = get_db_connection()
+        try:
+            import time
+            timestamp = int(time.time())
+            custom_code = f"CUSTOM_{timestamp}"
+            
+            conn.execute(
+                'INSERT INTO subjects (subject_name, subject_code) VALUES (?, ?)',
+                (custom_task, custom_code)
+            )
+            conn.commit()
+            
+            # Get the new subject_id
+            new_subject = conn.execute(
+                'SELECT subject_id FROM subjects WHERE subject_code = ?',
+                (custom_code,)
+            ).fetchone()
+            
+            subject_id = new_subject['subject_id']
+        except Exception as e:
+            conn.close()
+            error_message = f"Error creating custom task: {str(e)}"
+            conn = get_db_connection()
+            subjects = conn.execute('SELECT * FROM subjects ORDER BY subject_id').fetchall()
+            conn.close()
+            
+            return render_template('add_subject.html', 
+                                  subjects=subjects, 
+                                  day=day,
+                                  error_message=error_message,
+                                  start_time=start_time,
+                                  end_time=end_time,
+                                  subject_id=subject_id,
+                                  custom_task=custom_task,
+                                  task_description=task_description)
+    else:
+        subject_id = int(subject_id)
+        conn = get_db_connection()  # Get connection for regular subjects
     
     # Combine start and end time into a single time slot string
     time_slot = f"{start_time} - {end_time}"
     
     try:
-        conn = get_db_connection()
+        # Check if time slot is already taken
         existing = conn.execute(
             'SELECT * FROM timetable WHERE day = ? AND time_slot = ?',
             (day, time_slot)
@@ -596,11 +619,26 @@ def add_timetable():
         
         if existing:
             conn.close()
-            return f'<h1>Time slot already taken!</h1><p><a href="/edit_timetable">Go back</a></p>'
+            error_message = f"This time slot ({time_slot}) is already taken!"
+            
+            conn = get_db_connection()
+            subjects = conn.execute('SELECT * FROM subjects ORDER BY subject_id').fetchall()
+            conn.close()
+            
+            return render_template('add_subject.html', 
+                                  subjects=subjects, 
+                                  day=day,
+                                  error_message=error_message,
+                                  start_time=start_time,
+                                  end_time=end_time,
+                                  subject_id=subject_id,
+                                  custom_task=custom_task,
+                                  task_description=task_description)
         
+        # Insert into timetable WITH task_description
         conn.execute(
-            'INSERT INTO timetable (subject_id, day, time_slot) VALUES (?, ?, ?)',
-            (subject_id, day, time_slot)
+            'INSERT INTO timetable (subject_id, day, time_slot, task_description) VALUES (?, ?, ?, ?)',
+            (subject_id, day, time_slot, task_description)  # Add task_description here
         )
         conn.commit()
         conn.close()
@@ -608,18 +646,28 @@ def add_timetable():
         return redirect('/edit_timetable')
     
     except Exception as e:
-        return f'<h1>Error adding to timetable: {str(e)}</h1><p><a href="/edit_timetable">Go back</a></p>'
-
+        error_message = f"Error adding to timetable: {str(e)}"
+        conn = get_db_connection()
+        subjects = conn.execute('SELECT * FROM subjects ORDER BY subject_id').fetchall()
+        conn.close()
+        
+        return render_template('add_subject.html', 
+                              subjects=subjects, 
+                              day=day,
+                              error_message=error_message,
+                              start_time=start_time,
+                              end_time=end_time,
+                              subject_id=subject_id,
+                              custom_task=custom_task,
+                              task_description=task_description)
+    
 def is_valid_time_range(start_time_str, end_time_str):
     """Helper function to validate if end time is after start time"""
-    # Convert time strings to minutes since midnight for comparison
     def time_to_minutes(time_str):
-        # Parse time string like "8:00 AM" or "1:30 PM"
         try:
-            # Remove spaces and split
             time_str = time_str.strip().upper()
             
-            # Split time and AM/PM
+            # Check if AM/PM is present
             if " AM" in time_str:
                 time_part = time_str.replace(" AM", "")
                 is_pm = False
@@ -627,9 +675,13 @@ def is_valid_time_range(start_time_str, end_time_str):
                 time_part = time_str.replace(" PM", "")
                 is_pm = True
             else:
-                return 0
+                # Default to AM if no indicator
+                time_part = time_str
+                is_pm = False
             
-            # Split hours and minutes
+            # Handle case where time might have trailing spaces
+            time_part = time_part.strip()
+            
             if ":" in time_part:
                 hours_str, minutes_str = time_part.split(":")
                 hours = int(hours_str)
@@ -639,20 +691,29 @@ def is_valid_time_range(start_time_str, end_time_str):
                 minutes = 0
             
             # Convert 12-hour to 24-hour format
-            if is_pm and hours != 12:
-                hours += 12
-            elif not is_pm and hours == 12:
-                hours = 0
+            if is_pm:
+                if hours != 12:
+                    hours += 12
+            else:
+                if hours == 12:
+                    hours = 0
             
             return hours * 60 + minutes
-        except:
-            return 0
+        except Exception as e:
+            print(f"Error parsing time '{time_str}': {e}")
+            return -1  # Invalid time
     
-    start_minutes = time_to_minutes(start_time_str)
-    end_minutes = time_to_minutes(end_time_str)
-    
-    # End time must be after start time
-    return end_minutes > start_minutes
+    try:
+        start_minutes = time_to_minutes(start_time_str)
+        end_minutes = time_to_minutes(end_time_str)
+        
+        if start_minutes == -1 or end_minutes == -1:
+            return False
+            
+        return end_minutes > start_minutes
+    except Exception as e:
+        print(f"Time validation error: {e}")
+        return False
 
 @app.route('/remove_timetable', methods=['POST'])
 def remove_timetable():
@@ -687,6 +748,6 @@ def clear_timetable():
     
     except Exception as e:
         return f'<h1>Error clearing timetable: {str(e)}</h1><p><a href="/edit_timetable">Go back</a></p>'
-    
+
 if __name__ == '__main__':
     app.run(debug=True)
