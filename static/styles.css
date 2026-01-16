@@ -605,3 +605,60 @@ select.form-control {
     background-size: 16px;
     padding-right: 40px;
 }
+
+/* Custom Task Styles */
+.custom-task-input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 1rem;
+    margin-top: 5px;
+    background-color: white;
+}
+
+.custom-task-input:focus {
+    outline: none;
+    border-color: #607dff;
+    box-shadow: 0 0 0 3px rgba(96, 125, 255, 0.1);
+}
+
+.custom-task-input::placeholder {
+    color: #a0aec0;
+}
+
+.custom-task-hint {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 5px;
+    display: block;
+    font-style: italic;
+}
+
+.add-task-option {
+    font-weight: bold;
+    color: #607dff;
+    background-color: rgba(96, 125, 255, 0.1);
+    border-top: 1px solid #e2e8f0;
+    margin-top: 5px;
+    padding-top: 8px;
+}
+
+.add-task-option:hover {
+    background-color: rgba(96, 125, 255, 0.2);
+}
+
+/* Error message styles */
+.error-message {
+    background-color: #ffebee;
+    color: #c62828;
+    padding: 12px 15px;
+    border-radius: 6px;
+    border-left: 4px solid #c62828;
+    margin-bottom: 20px;
+    font-weight: 500;
+}
+
+.error-message:empty {
+    display: none;
+}
