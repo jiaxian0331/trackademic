@@ -28,10 +28,17 @@
         </aside>
 
         <main class="main-content">
+            <div class="search-section" style="margin-bottom: 20px;">
+                <form action="{{ url_for('saved_posts') }}" method="GET">
+                    <input type="text" name="search" placeholder="Search saved content..." value="{{ search_query }}">
+                    <button type="submit">Search</button>
+                </form>
+            </div>
+
             <div class="folders-container">
                 {% if not organized %}
                     <div class="post">
-                        <p>You haven't created any folders yet.</p>
+                        <p>No posts saved or match found.</p>
                     </div>
                 {% endif %}
 
