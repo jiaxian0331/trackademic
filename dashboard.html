@@ -26,6 +26,13 @@
         </aside>
 
         <main class="main-content">
+            <div class="search-section" style="margin-bottom: 20px;">
+                <form action="{{ url_for('dashboard') }}" method="GET">
+                    <input type="text" name="search" placeholder="Search for something..." value="{{ search_query }}">
+                    <button type="submit">Search</button>
+                </form>
+            </div>
+
             <div class="post-input-bar">
                 <form method="POST" enctype="multipart/form-data">
                     <textarea name="content" placeholder="What's on your mind?" required></textarea>
