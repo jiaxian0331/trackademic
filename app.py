@@ -10,7 +10,6 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 def init_db():
     db = sqlite3.connect("database.db")
-
     db.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -19,7 +18,6 @@ def init_db():
             password TEXT
         )
     """)
-
     db.execute("""
         CREATE TABLE IF NOT EXISTS posts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -29,7 +27,6 @@ def init_db():
             FOREIGN KEY(user_id) REFERENCES users(id)
         )
     """)
-
     db.execute("""
         CREATE TABLE IF NOT EXISTS comments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,7 +38,6 @@ def init_db():
             FOREIGN KEY(post_id) REFERENCES posts(id)
         )
     """)
-
     db.execute("""
         CREATE TABLE IF NOT EXISTS folders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -50,7 +46,6 @@ def init_db():
             FOREIGN KEY(user_id) REFERENCES users(id)
         )
     """)
-
     db.execute("""
         CREATE TABLE IF NOT EXISTS saved_posts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -87,7 +82,6 @@ def signup():
         username = request.form["username"]
         email = request.form["email"]
         password = request.form["password"]
-
         db = sqlite3.connect("database.db")
         try:
             db.execute("INSERT INTO users (username, email, password) VALUES (?, ?, ?)", (username, email, password))
@@ -104,12 +98,10 @@ def login():
     if request.method == "POST":
         email = request.form["email"]
         password = request.form["password"]
-
         db = sqlite3.connect("database.db")
         cursor = db.execute("SELECT * FROM users WHERE email=? AND password=?", (email, password))
         user = cursor.fetchone()
         db.close()
-
         if user:
             session["user_id"] = user[0]
             session["username"] = user[1]
@@ -130,6 +122,7 @@ def dashboard():
 
     user_id = session["user_id"]
     username = session["username"]
+    search_query = request.args.get('search', '')
 
     if request.method == "POST":
         content = request.form.get("content")
@@ -138,7 +131,6 @@ def dashboard():
         if file and file.filename:
             filename = file.filename
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-
         db = sqlite3.connect("database.db")
         db.execute("INSERT INTO posts (user_id, content, filename) VALUES (?, ?, ?)", (user_id, content, filename))
         db.commit()
@@ -146,17 +138,31 @@ def dashboard():
         return redirect("/dashboard")
 
     db = sqlite3.connect("database.db")
-    cursor = db.execute("SELECT id, folder_name FROM folders WHERE user_id=?", (user_id,))
+    
+    # --- UPDATED: Only show folders that have at least one post saved in them ---
+    cursor = db.execute("""
+        SELECT DISTINCT folders.id, folders.folder_name 
+        FROM folders 
+        JOIN saved_posts ON folders.id = saved_posts.folder_id 
+        WHERE folders.user_id=?
+    """, (user_id,))
     folders = cursor.fetchall()
 
-    cursor = db.execute("""
+    query = """
         SELECT 
             posts.id, posts.content, posts.filename, users.username, posts.user_id,
             EXISTS(SELECT 1 FROM saved_posts WHERE post_id = posts.id AND user_id = ?)
         FROM posts 
         JOIN users ON posts.user_id = users.id
-        ORDER BY posts.id DESC
-    """, (user_id,))
+    """
+    params = [user_id]
+    if search_query:
+        query += " WHERE posts.content LIKE ? OR users.username LIKE ?"
+        params.append(f'%{search_query}%')
+        params.append(f'%{search_query}%')
+
+    query += " ORDER BY posts.id DESC"
+    cursor = db.execute(query, params)
     posts = cursor.fetchall()
     
     posts_with_comments = []
@@ -165,18 +171,16 @@ def dashboard():
         posts_with_comments.append((*post, comments))
 
     db.close()
-    return render_template("dashboard.html", username=username, posts=posts_with_comments, folders=folders)
+    return render_template("dashboard.html", username=username, posts=posts_with_comments, folders=folders, search_query=search_query)
 
 @app.route("/save_post/<int:post_id>", methods=["POST"])
 def save_post(post_id):
     if "user_id" not in session: return redirect("/login")
-    
     user_id = session["user_id"]
     folder_id = request.form.get("folder_id")
     new_folder_name = request.form.get("new_folder_name")
 
     db = sqlite3.connect("database.db")
-
     if new_folder_name and new_folder_name.strip():
         cursor = db.execute("INSERT INTO folders (user_id, folder_name) VALUES (?, ?)", 
                             (user_id, new_folder_name.strip()))
@@ -193,30 +197,51 @@ def save_post(post_id):
 def saved_posts():
     if "user_id" not in session: return redirect("/login")
     user_id = session["user_id"]
+    search_query = request.args.get('search', '')
     db = sqlite3.connect("database.db")
-
-    cursor = db.execute("""
+    query = """
         SELECT f.folder_name, p.content, p.filename, u.username, sp.id
         FROM saved_posts sp
         JOIN folders f ON sp.folder_id = f.id
         JOIN posts p ON sp.post_id = p.id
         JOIN users u ON p.user_id = u.id
         WHERE sp.user_id = ?
-    """, (user_id,))
+    """
+    params = [user_id]
+    if search_query:
+        query += " AND (p.content LIKE ? OR f.folder_name LIKE ?)"
+        params.append(f'%{search_query}%')
+        params.append(f'%{search_query}%')
+
+    cursor = db.execute(query, params)
     data = cursor.fetchall()
-    
     organized = {}
     for folder, content, file, poster, sp_id in data:
         if folder not in organized: organized[folder] = []
         organized[folder].append({'content': content, 'file': file, 'poster': poster, 'sp_id': sp_id})
     db.close()
-    return render_template("saved.html", organized=organized, username=session["username"])
+    return render_template("saved.html", organized=organized, username=session["username"], search_query=search_query)
 
 @app.route("/unsave/<int:sp_id>", methods=["POST"])
 def unsave(sp_id):
     if "user_id" not in session: return redirect("/login")
+    user_id = session["user_id"]
     db = sqlite3.connect("database.db")
-    db.execute("DELETE FROM saved_posts WHERE id=? AND user_id=?", (sp_id, session["user_id"]))
+    
+    # --- UPDATED: Check if folder becomes empty after deletion ---
+    cursor = db.execute("SELECT folder_id FROM saved_posts WHERE id=? AND user_id=?", (sp_id, user_id))
+    result = cursor.fetchone()
+    
+    if result:
+        folder_id = result[0]
+        db.execute("DELETE FROM saved_posts WHERE id=? AND user_id=?", (sp_id, user_id))
+        
+        # Check if any posts are still in this folder
+        check = db.execute("SELECT COUNT(*) FROM saved_posts WHERE folder_id=?", (folder_id,)).fetchone()
+        if check[0] == 0:
+            # Delete the folder if it's empty
+            db.execute("DELETE FROM folders WHERE id=?", (folder_id,))
+            
     db.commit()
     db.close()
     return redirect("/saved")
@@ -236,7 +261,8 @@ def delete_post(post_id):
         db.execute("DELETE FROM posts WHERE id=? AND user_id=?", (post_id, user_id))
         db.execute("DELETE FROM comments WHERE post_id=?", (post_id,))
         db.execute("DELETE FROM saved_posts WHERE post_id=?", (post_id,))
-        db.commit()
+        # Optional: Add a cleanup for empty folders here if post deletion empties a folder
+    db.commit()
     db.close()
     return redirect("/dashboard")
 
