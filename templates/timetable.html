@@ -145,19 +145,31 @@
                     <ul class="today-schedule">
                         {% for item in weekly_summary %}
                         <li>
-                            <div>
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <span class="schedule-time">{{ ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][item.day] }}</span>
-                                    <span style="margin: 0 5px;">-</span>
-                                    <span class="schedule-time">{{ item.time_slot }}</span>
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                <div style="flex-grow: 1;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <span class="schedule-time">{{ ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][item.day] }}</span>
+                                        <span style="margin: 0 5px;">-</span>
+                                        <span class="schedule-time">{{ item.time_slot }}</span>
+                                    </div>
+                                    <div class="schedule-subject">{{ item.subject_name }}</div>
+                                    {% if item.task_description %}
+                                    <small style="color: #666; font-size: 0.8rem; margin-top: 3px; display: block;">
+                                        {{ item.task_description }}
+                                    </small>
+                                    {% endif %}
+                                    <small style="color: #888; font-size: 0.75rem;">{{ item.subject_code }}</small>
                                 </div>
-                                <div class="schedule-subject">{{ item.subject_name }}</div>
-                                {% if item.task_description %}
-                                <small style="color: #666; font-size: 0.8rem; margin-top: 3px; display: block;">
-                                    {{ item.task_description }}
-                                </small>
-                                {% endif %}
-                                <small style="color: #888; font-size: 0.75rem;">{{ item.subject_code }}</small>
+                                <!-- Green tick button -->
+                                <form method="POST" action="{{ url_for('complete_task') }}" class="complete-form" 
+                                      style="margin-left: 10px;">
+                                    <input type="hidden" name="day" value="{{ item.day }}">
+                                    <input type="hidden" name="time_slot" value="{{ item.time_slot }}">
+                                    <input type="hidden" name="subject_id" value="{{ item.subject_id }}">
+                                    <button type="submit" class="complete-btn" title="Mark as done">
+                                        ✓
+                                    </button>
+                                </form>
                             </div>
                         </li>
                         {% endfor %}
