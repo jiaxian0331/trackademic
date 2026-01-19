@@ -137,11 +137,12 @@ def get_weekly_summary():
             t.time_slot,
             s.subject_name,
             s.subject_code,
+            s.subject_id,
             t.task_description,
             COUNT(*) as task_count
         FROM timetable t 
         JOIN subjects s ON t.subject_id = s.subject_id
-        GROUP BY t.day, s.subject_name
+        GROUP BY t.day, s.subject_name, t.time_slot
         ORDER BY t.day, t.time_slot
     ''').fetchall()
     
@@ -436,7 +437,7 @@ def timetable():
             'subject_name': item['subject_name'],
             'subject_code': item['subject_code'],
             'time_slot': time_slot,
-            'task_description': item['task_description']  # ADD THIS
+            'task_description': item['task_description']
         }
     
     # Get today's schedule
@@ -473,7 +474,7 @@ def edit_timetable():
             'subject_name': item['subject_name'],
             'subject_code': item['subject_code'],
             'time_slot': time_slot,
-            'task_description': item['task_description']  # ADD THIS
+            'task_description': item['task_description']
         }
     
     # Get today's schedule
@@ -748,6 +749,43 @@ def clear_timetable():
     
     except Exception as e:
         return f'<h1>Error clearing timetable: {str(e)}</h1><p><a href="/edit_timetable">Go back</a></p>'
+
+@app.route('/complete_task', methods=['POST'])
+def complete_task():
+    """Mark a task as completed and remove it from timetable"""
+    try:
+        day = int(request.form.get('day', 0))
+        time_slot = request.form.get('time_slot', '')
+        subject_id = request.form.get('subject_id', '')
+        
+        conn = get_db_connection()
+        
+        # First, check if this is a custom task (subject_code starts with CUSTOM_)
+        subject = conn.execute(
+            'SELECT subject_code FROM subjects WHERE subject_id = ?',
+            (subject_id,)
+        ).fetchone()
+        
+        if subject and subject['subject_code'].startswith('CUSTOM_'):
+            # Delete the custom subject from subjects table
+            conn.execute(
+                'DELETE FROM subjects WHERE subject_id = ?',
+                (subject_id,)
+            )
+        
+        # Delete from timetable
+        conn.execute(
+            'DELETE FROM timetable WHERE day = ? AND time_slot = ?',
+            (day, time_slot)
+        )
+        
+        conn.commit()
+        conn.close()
+        
+        return redirect('/timetable')
+    
+    except Exception as e:
+        return f'<h1>Error completing task: {str(e)}</h1><p><a href="/timetable">Go back</a></p>'
 
 if __name__ == '__main__':
     app.run(debug=True)

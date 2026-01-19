@@ -299,6 +299,39 @@ th {
     padding: 0;
 }
 
+/* Green tick button styles */
+.complete-form {
+    display: inline-block;
+}
+
+.complete-btn {
+    background: #00b894;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.complete-btn:hover {
+    background: #00a085;
+    transform: scale(1.1);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.complete-btn:active {
+    transform: scale(0.95);
+}
+
+/* Make today's tasks list items also use flex layout */
 .today-schedule li {
     padding: 10px;
     margin-bottom: 8px;
@@ -307,7 +340,12 @@ th {
     border: 1px solid #e2e8f0;
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
+}
+
+/* Adjust the content inside li */
+.today-schedule li > div:first-child {
+    flex-grow: 1;
 }
 
 .schedule-time {
