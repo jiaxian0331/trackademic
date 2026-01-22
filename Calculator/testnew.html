@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trackademic</title>
+    
+    <!-- PyScript CSS and JS -->
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.11.1/core.css">
+    <script type="module" src="https://pyscript.net/releases/2024.11.1/core.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -440,537 +445,534 @@
         </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const API_BASE_URL = 'http://localhost:5000';
-            let allSubjects = [];
-            let addedSubjectIds = new Set();
-            let currentSubjects = []; // Track subjects with grades
-            let cgpaHistory = []; // Start with empty history
+    <!-- PyScript Python Code -->
+    <py-script>
+        import asyncio
+        import json
+        from js import document, console, alert, confirm, localStorage, fetch
+        from pyodide.ffi import create_proxy
+        
+        # Constants
+        API_BASE_URL = 'http://localhost:5000'
+        
+        # Global variables
+        all_subjects = []
+        added_subject_ids = set()
+        current_subjects = []
+        cgpa_history = []
+        
+        # Grade mapping
+        grade_scale = {
+            'A+': 4.00,
+            'A': 4.00,
+            'A-': 3.67,
+            'B+': 3.33,
+            'B': 3.00,
+            'B-': 2.67,
+            'C+': 2.33,
+            'C': 2.00,
+            'C-': 1.67,
+            'D+': 1.33,
+            'D': 1.00,
+            'F': 0.00
+        }
+        
+        # Get DOM elements
+        trimester_select = document.getElementById('trimester-select')
+        subject_select = document.getElementById('subject-select')
+        add_subject_btn = document.getElementById('add-subject-btn')
+        subjects_tbody = document.getElementById('subjects-tbody')
+        loading_message = document.getElementById('loading-message')
+        error_message = document.getElementById('error-message')
+        save_cgpa_btn = document.getElementById('save-cgpa-btn')
+        reset_btn = document.getElementById('reset-btn')
+        clear_history_btn = document.getElementById('clear-history-btn')
+        gpa_result_el = document.getElementById('gpa-result')
+        cgpa_result_el = document.getElementById('cgpa-result')
+        cgpa_history_el = document.getElementById('cgpa-history')
+        
+        # Initialize the application
+        async def initialize():
+            await load_all_subjects()
+            initialize_fresh_state()
+            setup_event_listeners()
+            calculate_and_display_gpa()
+        
+        # Set up event listeners
+        def setup_event_listeners():
+            def on_subject_select_change(event):
+                add_subject_btn.disabled = not subject_select.value
             
-            // Grade mapping
-            const gradeScale = {
-                'A+': 4.00,
-                'A': 4.00,
-                'A-': 3.67,
-                'B+': 3.33,
-                'B': 3.00,
-                'B-': 2.67,
-                'C+': 2.33,
-                'C': 2.00,
-                'C-': 1.67,
-                'D+': 1.33,
-                'D': 1.00,
-                'F': 0.00
-            };
+            def on_trimester_select_change(event):
+                console.log(f"Switched to Trimester {trimester_select.value}")
+                reset_trimester()
             
-            // DOM elements
-            const trimesterSelect = document.getElementById('trimester-select');
-            const subjectSelect = document.getElementById('subject-select');
-            const addSubjectBtn = document.getElementById('add-subject-btn');
-            const subjectsTbody = document.getElementById('subjects-tbody');
-            const loadingMessage = document.getElementById('loading-message');
-            const errorMessage = document.getElementById('error-message');
-            const saveCgpaBtn = document.getElementById('save-cgpa-btn');
-            const resetBtn = document.getElementById('reset-btn');
-            const clearHistoryBtn = document.getElementById('clear-history-btn');
-            const gpaResultEl = document.getElementById('gpa-result');
-            const cgpaResultEl = document.getElementById('cgpa-result');
-            const cgpaHistoryEl = document.getElementById('cgpa-history');
+            def on_add_subject_click(event):
+                add_selected_subject()
             
-            // Initialize the application - START FRESH
-            loadAllSubjects();
-            initializeFreshState(); // Start with empty history
+            def on_save_cgpa_click(event):
+                save_to_cgpa_history()
             
-            // Event listeners
-            subjectSelect.addEventListener('change', function() {
-                addSubjectBtn.disabled = !this.value;
-            });
+            def on_reset_click(event):
+                reset_trimester()
             
-            trimesterSelect.addEventListener('change', function() {
-                const trimesterNumber = this.value;
-                console.log(`Switched to Trimester ${trimesterNumber}`);
-                resetTrimester();
-            });
+            def on_clear_history_click(event):
+                clear_all_history()
             
-            addSubjectBtn.addEventListener('click', addSelectedSubject);
-            saveCgpaBtn.addEventListener('click', saveToCgpaHistory);
-            resetBtn.addEventListener('click', resetTrimester);
-            clearHistoryBtn.addEventListener('click', clearAllHistory);
-            
-            function initializeFreshState() {
-                // Clear any existing localStorage data
-                localStorage.removeItem('cgpaHistory');
+            # Create proxies for Python functions to be called from JS
+            subject_select.addEventListener('change', create_proxy(on_subject_select_change))
+            trimester_select.addEventListener('change', create_proxy(on_trimester_select_change))
+            add_subject_btn.addEventListener('click', create_proxy(on_add_subject_click))
+            save_cgpa_btn.addEventListener('click', create_proxy(on_save_cgpa_click))
+            reset_btn.addEventListener('click', create_proxy(on_reset_click))
+            clear_history_btn.addEventListener('click', create_proxy(on_clear_history_click))
+        
+        # Initialize fresh state
+        def initialize_fresh_state():
+            localStorage.removeItem('cgpaHistory')
+            cgpa_history.clear()
+            update_cgpa_history_display()
+            calculate_cgpa()
+            console.log('Started with fresh state - no previous history loaded')
+        
+        # Load all subjects from API
+        async def load_all_subjects():
+            try:
+                response = await fetch(f"{API_BASE_URL}/api/subjects")
+                if not response.ok:
+                    raise Exception('Failed to load subjects from database')
                 
-                // Reset cgpaHistory to empty array
-                cgpaHistory = [];
+                data = await response.json()
                 
-                // Update displays
-                updateCgpaHistoryDisplay();
-                calculateCGPA();
-                
-                console.log('Started with fresh state - no previous history loaded');
+                if data.get('success'):
+                    all_subjects.clear()
+                    all_subjects.extend(data.get('subjects', []))
+                    populate_subject_select()
+                    loading_message.style.display = 'none'
+                    console.log(f"Loaded {len(all_subjects)} subjects from database")
+                else:
+                    raise Exception(data.get('error', 'Failed to load subjects'))
+            except Exception as e:
+                console.error('Error loading subjects:', e)
+                show_error(f"Error loading subjects: {str(e)}. Please make sure the backend server is running at http://localhost:5000")
+                loading_message.textContent = 'Failed to load subjects from database. Check if Flask server is running.'
+        
+        # Populate subject select dropdown
+        def populate_subject_select():
+            subject_select.innerHTML = '<option value="">Select a subject to add...</option>'
+            
+            if len(all_subjects) == 0:
+                option = document.createElement('option')
+                option.value = ''
+                option.textContent = 'No subjects available. Please add subjects to database.'
+                subject_select.appendChild(option)
+                return
+            
+            for subject in all_subjects:
+                option = document.createElement('option')
+                option.value = str(subject.get('id', ''))
+                option.textContent = f"{subject.get('code', '')} - {subject.get('name', '')} ({subject.get('credits', 0)} credits)"
+                option.dataset.subject = json.dumps(subject)
+                subject_select.appendChild(option)
+        
+        # Add selected subject to table
+        def add_selected_subject():
+            selected_option = subject_select.options[subject_select.selectedIndex]
+            if not selected_option.value:
+                return
+            
+            subject = json.loads(selected_option.dataset.subject)
+            subject_id = subject.get('id')
+            
+            # Check if subject already added
+            if subject_id in added_subject_ids:
+                alert('This subject has already been added to the trimester.')
+                return
+            
+            add_subject_to_table(subject)
+            added_subject_ids.add(subject_id)
+            subject_select.value = ''
+            add_subject_btn.disabled = True
+        
+        # Add subject to table
+        def add_subject_to_table(subject):
+            row = document.createElement('tr')
+            subject_id = subject.get('id')
+            row.dataset.subjectId = str(subject_id)
+            row.dataset.credits = str(subject.get('credits', 0))
+            
+            grade_select_html = create_grade_select()
+            
+            row.innerHTML = f'''
+                <td class="subject-name">{subject.get('name', '')}</td>
+                <td class="subject-code">{subject.get('code', '')}</td>
+                <td class="credit-hours">{subject.get('credits', 0)}</td>
+                <td class="grade-select">{grade_select_html}</td>
+                <td class="grade-points" id="grade-points-{subject_id}">0.00</td>
+                <td>
+                    <button class="action-btn" title="Delete subject">
+                        ×
+                    </button>
+                </td>
+            '''
+            
+            subjects_tbody.appendChild(row)
+            
+            # Track this subject
+            subject_with_grade = {
+                'id': subject_id,
+                'name': subject.get('name', ''),
+                'code': subject.get('code', ''),
+                'credits': subject.get('credits', 0),
+                'grade': '',
+                'trimester': trimester_select.value
             }
+            current_subjects.append(subject_with_grade)
             
-            function loadAllSubjects() {
-                fetch(`${API_BASE_URL}/api/subjects`)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Failed to load subjects from database');
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (data.success) {
-                            allSubjects = data.subjects;
-                            populateSubjectSelect();
-                            loadingMessage.style.display = 'none';
-                            console.log(`Loaded ${allSubjects.length} subjects from database`);
-                        } else {
-                            throw new Error(data.error || 'Failed to load subjects');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error loading subjects:', error);
-                        showError(`Error loading subjects: ${error.message}. Please make sure the backend server is running at http://localhost:5000`);
-                        loadingMessage.textContent = 'Failed to load subjects from database. Check if Flask server is running.';
-                    });
-            }
+            # Add event listener for grade selection
+            grade_select_element = row.querySelector('.grade-select select')
             
-            function populateSubjectSelect() {
-                subjectSelect.innerHTML = '<option value="">Select a subject to add...</option>';
+            def on_grade_change(event):
+                update_grade_points(subject_id, event.target.value)
                 
-                if (allSubjects.length === 0) {
-                    const option = document.createElement('option');
-                    option.value = '';
-                    option.textContent = 'No subjects available. Please add subjects to database.';
-                    subjectSelect.appendChild(option);
-                    return;
-                }
+                # Update the subject's grade in current_subjects array
+                for subj in current_subjects:
+                    if subj['id'] == subject_id:
+                        subj['grade'] = event.target.value
+                        break
                 
-                allSubjects.forEach(subject => {
-                    const option = document.createElement('option');
-                    option.value = subject.id;
-                    option.textContent = `${subject.code} - ${subject.name} (${subject.credits} credits)`;
-                    option.dataset.subject = JSON.stringify(subject);
-                    subjectSelect.appendChild(option);
-                });
-            }
+                # Recalculate and update GPA display
+                calculate_and_display_gpa()
             
-            function addSelectedSubject() {
-                const selectedOption = subjectSelect.options[subjectSelect.selectedIndex];
-                if (!selectedOption.value) return;
-                
-                const subject = JSON.parse(selectedOption.dataset.subject);
-                
-                // Check if subject already added
-                if (addedSubjectIds.has(subject.id)) {
-                    alert('This subject has already been added to the trimester.');
-                    return;
-                }
-                
-                addSubjectToTable(subject);
-                addedSubjectIds.add(subject.id);
-                subjectSelect.value = '';
-                addSubjectBtn.disabled = true;
-            }
+            grade_select_element.addEventListener('change', create_proxy(on_grade_change))
             
-            function addSubjectToTable(subject) {
-                const row = document.createElement('tr');
-                row.dataset.subjectId = subject.id;
-                row.dataset.credits = subject.credits;
+            # Add delete functionality
+            delete_btn = row.querySelector('.action-btn')
+            
+            def on_delete_click(event):
+                subject_id_to_remove = int(row.dataset.subjectId)
+                added_subject_ids.discard(subject_id_to_remove)
                 
-                const gradeSelect = createGradeSelect();
+                # Remove from current_subjects array
+                for i, subj in enumerate(current_subjects):
+                    if subj['id'] == subject_id_to_remove:
+                        current_subjects.pop(i)
+                        break
                 
-                row.innerHTML = `
-                    <td class="subject-name">${subject.name}</td>
-                    <td class="subject-code">${subject.code}</td>
-                    <td class="credit-hours">${subject.credits}</td>
-                    <td class="grade-select">${gradeSelect.outerHTML}</td>
-                    <td class="grade-points" id="grade-points-${subject.id}">0.00</td>
-                    <td>
-                        <button class="action-btn" title="Delete subject">
-                            ×
-                        </button>
-                    </td>
-                `;
+                row.remove()
+                calculate_and_display_gpa()
+            
+            delete_btn.addEventListener('click', create_proxy(on_delete_click))
+        
+        # Create grade select dropdown
+        def create_grade_select():
+            select = document.createElement('select')
+            select.innerHTML = '<option value="">Select Grade</option>'
+            
+            for grade in grade_scale:
+                option = document.createElement('option')
+                option.value = grade
+                option.textContent = grade
+                select.appendChild(option)
+            
+            return select.outerHTML
+        
+        # Update grade points display
+        def update_grade_points(subject_id, grade):
+            grade_points = grade_scale.get(grade, 0)
+            grade_points_el = document.getElementById(f'grade-points-{subject_id}')
+            if grade_points_el:
+                grade_points_el.textContent = f'{grade_points:.2f}'
+        
+        # Calculate and display GPA
+        def calculate_and_display_gpa():
+            gpa_data = calculate_gpa()
+            update_gpa_display(gpa_data)
+            return gpa_data
+        
+        # Calculate GPA
+        def calculate_gpa():
+            total_credits = 0
+            total_grade_points = 0
+            subjects_with_grades = 0
+            subjects_without_grades = 0
+            
+            for subject in current_subjects:
+                grade = subject.get('grade', '')
+                credits = subject.get('credits', 0)
                 
-                subjectsTbody.appendChild(row);
-                
-                // Track this subject
-                const subjectWithGrade = {
-                    id: subject.id,
-                    name: subject.name,
-                    code: subject.code,
-                    credits: subject.credits,
-                    grade: '',
-                    trimester: trimesterSelect.value
-                };
-                currentSubjects.push(subjectWithGrade);
-                
-                // Add event listener for grade selection
-                const gradeSelectElement = row.querySelector('.grade-select select');
-                gradeSelectElement.addEventListener('change', function() {
-                    updateGradePoints(subject.id, this.value);
+                if grade and grade in grade_scale:
+                    grade_points = grade_scale[grade]
+                    subject_grade_points = credits * grade_points
                     
-                    // Update the subject's grade in currentSubjects array
-                    const subjectIndex = currentSubjects.findIndex(s => s.id === subject.id);
-                    if (subjectIndex !== -1) {
-                        currentSubjects[subjectIndex].grade = this.value;
-                    }
-                    
-                    // Recalculate and update GPA display
-                    calculateAndDisplayGPA();
-                });
-                
-                // Add delete functionality
-                row.querySelector('.action-btn').addEventListener('click', function() {
-                    const subjectId = parseInt(row.dataset.subjectId);
-                    addedSubjectIds.delete(subjectId);
-                    
-                    // Remove from currentSubjects array
-                    const subjectIndex = currentSubjects.findIndex(s => s.id === subjectId);
-                    if (subjectIndex !== -1) {
-                        currentSubjects.splice(subjectIndex, 1);
-                    }
-                    
-                    row.remove();
-                    calculateAndDisplayGPA();
-                });
+                    total_credits += credits
+                    total_grade_points += subject_grade_points
+                    subjects_with_grades += 1
+                else:
+                    subjects_without_grades += 1
+            
+            gpa = (total_grade_points / total_credits) if total_credits > 0 else 0
+            
+            return {
+                'totalCredits': total_credits,
+                'totalGradePoints': total_grade_points,
+                'gpa': gpa,
+                'subjectsWithGrades': subjects_with_grades,
+                'subjectsWithoutGrades': subjects_without_grades,
+                'totalSubjects': len(current_subjects)
+            }
+        
+        # Update GPA display
+        def update_gpa_display(gpa_data):
+            gpa = gpa_data.get('gpa', 0)
+            subjects_without_grades = gpa_data.get('subjectsWithoutGrades', 0)
+            total_subjects = gpa_data.get('totalSubjects', 0)
+            
+            # Update the GPA value
+            gpa_result_el.textContent = f'{gpa:.2f}'
+            
+            # Enable/disable save button based on status
+            if total_subjects == 0:
+                save_cgpa_btn.disabled = True
+            elif subjects_without_grades > 0:
+                save_cgpa_btn.disabled = True
+            else:
+                save_cgpa_btn.disabled = False
+        
+        # Calculate CGPA
+        def calculate_cgpa():
+            if len(cgpa_history) == 0:
+                cgpa_result_el.textContent = '0.00'
+                return 0
+            
+            total_cumulative_credits = 0
+            total_cumulative_grade_points = 0
+            
+            for semester in cgpa_history:
+                total_cumulative_credits += semester.get('totalCredits', 0)
+                total_cumulative_grade_points += semester.get('totalGradePoints', 0)
+            
+            cgpa = (total_cumulative_grade_points / total_cumulative_credits) if total_cumulative_credits > 0 else 0
+            
+            cgpa_result_el.textContent = f'{cgpa:.2f}'
+            return cgpa
+        
+        # Save to CGPA history
+        async def save_to_cgpa_history():
+            current_semester = calculate_gpa()
+            
+            if current_semester.get('totalCredits') == 0:
+                alert('Please add subjects before saving.')
+                return
+            
+            # Check if any subject is missing a grade
+            has_missing_grades = any(not subject.get('grade') for subject in current_subjects)
+            
+            if has_missing_grades:
+                alert('Please select grades for all subjects before saving.')
+                return
+            
+            # Get the current trimester number from dropdown
+            trimester_number = trimester_select.value
+            trimester_name = f'Trimester {trimester_number}'
+            
+            # Prepare data for database save
+            save_data = {
+                'trimester': trimester_name,
+                'gpa': current_semester.get('gpa', 0),
+                'trimesterNumber': trimester_number,
+                'totalCredits': current_semester.get('totalCredits', 0),
+                'totalGradePoints': current_semester.get('totalGradePoints', 0),
+                'subjects': current_subjects
             }
             
-            function createGradeSelect() {
-                const select = document.createElement('select');
-                select.innerHTML = '<option value="">Select Grade</option>';
-                
-                for (const grade in gradeScale) {
-                    const option = document.createElement('option');
-                    option.value = grade;
-                    option.textContent = grade;
-                    select.appendChild(option);
-                }
-                
-                return select;
-            }
-            
-            function updateGradePoints(subjectId, grade) {
-                const gradePoints = gradeScale[grade] || 0;
-                const gradePointsEl = document.getElementById(`grade-points-${subjectId}`);
-                if (gradePointsEl) {
-                    gradePointsEl.textContent = gradePoints.toFixed(2);
-                }
-            }
-            
-            function calculateAndDisplayGPA() {
-                const gpaData = calculateGPA();
-                updateGPADisplay(gpaData);
-                return gpaData;
-            }
-            
-            function calculateGPA() {
-                let totalCredits = 0;
-                let totalGradePoints = 0;
-                let subjectsWithGrades = 0;
-                let subjectsWithoutGrades = 0;
-                
-                currentSubjects.forEach(subject => {
-                    const grade = subject.grade;
-                    const credits = subject.credits;
-                    
-                    if (grade && grade in gradeScale) {
-                        const gradePoints = gradeScale[grade];
-                        const subjectGradePoints = credits * gradePoints;
-                        
-                        totalCredits += credits;
-                        totalGradePoints += subjectGradePoints;
-                        subjectsWithGrades++;
-                    } else {
-                        subjectsWithoutGrades++;
-                    }
-                });
-                
-                const gpa = totalCredits > 0 ? (totalGradePoints / totalCredits) : 0;
-                
-                return { 
-                    totalCredits, 
-                    totalGradePoints, 
-                    gpa,
-                    subjectsWithGrades,
-                    subjectsWithoutGrades,
-                    totalSubjects: currentSubjects.length
-                };
-            }
-            
-            function updateGPADisplay(gpaData) {
-                const { gpa, subjectsWithoutGrades, totalSubjects } = gpaData;
-                
-                // Update the GPA value
-                gpaResultEl.textContent = gpa.toFixed(2);
-                
-                // Enable/disable save button based on status
-                if (totalSubjects === 0) {
-                    saveCgpaBtn.disabled = true;
-                } else if (subjectsWithoutGrades > 0) {
-                    saveCgpaBtn.disabled = true;
-                } else {
-                    saveCgpaBtn.disabled = false;
-                }
-            }
-            
-            function calculateCGPA() {
-                if (cgpaHistory.length === 0) {
-                    cgpaResultEl.textContent = '0.00';
-                    return 0;
-                }
-                
-                let totalCumulativeCredits = 0;
-                let totalCumulativeGradePoints = 0;
-                
-                cgpaHistory.forEach(semester => {
-                    totalCumulativeCredits += semester.totalCredits || 0;
-                    totalCumulativeGradePoints += semester.totalGradePoints || 0;
-                });
-                
-                const cgpa = totalCumulativeCredits > 0 ? 
-                    (totalCumulativeGradePoints / totalCumulativeCredits) : 0;
-                
-                cgpaResultEl.textContent = cgpa.toFixed(2);
-                
-                return cgpa;
-            }
-            
-            function saveToCgpaHistory() {
-                const currentSemester = calculateGPA();
-                
-                if (currentSemester.totalCredits === 0) {
-                    alert('Please add subjects before saving.');
-                    return;
-                }
-                
-                // Check if any subject is missing a grade
-                let hasMissingGrades = false;
-                currentSubjects.forEach(subject => {
-                    if (!subject.grade) {
-                        hasMissingGrades = true;
-                    }
-                });
-                
-                if (hasMissingGrades) {
-                    alert('Please select grades for all subjects before saving.');
-                    return;
-                }
-                
-                // Get the current trimester number from dropdown
-                const trimesterNumber = trimesterSelect.value;
-                const trimesterName = `Trimester ${trimesterNumber}`;
-                
-                // Prepare data for database save
-                const saveData = {
-                    trimester: trimesterName,
-                    gpa: currentSemester.gpa,
-                    trimesterNumber: trimesterNumber,
-                    totalCredits: currentSemester.totalCredits,
-                    totalGradePoints: currentSemester.totalGradePoints,
-                    subjects: currentSubjects
-                };
-                
-                // Try to save to database
-                fetch(`${API_BASE_URL}/api/save-trimester`, {
-                    method: 'POST',
-                    headers: {
+            # Try to save to database
+            try:
+                response = await fetch(f"{API_BASE_URL}/api/save-trimester", {
+                    'method': 'POST',
+                    'headers': {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(saveData)
+                    'body': json.dumps(save_data)
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Also save locally for immediate display
-                        const semesterData = {
-                            semester: trimesterName,
-                            trimesterNumber: trimesterNumber,
-                            date: new Date().toLocaleDateString(),
-                            totalCredits: currentSemester.totalCredits,
-                            totalGradePoints: currentSemester.totalGradePoints,
-                            gpa: currentSemester.gpa,
-                            subjects: currentSubjects
-                        };
-                        
-                        // Check if this trimester already exists in history
-                        const existingIndex = cgpaHistory.findIndex(item => item.trimesterNumber === trimesterNumber);
-                        if (existingIndex !== -1) {
-                            // Update existing trimester
-                            cgpaHistory[existingIndex] = semesterData;
-                        } else {
-                            // Add new trimester
-                            cgpaHistory.push(semesterData);
-                        }
-                        
-                        // Sort by trimester number
-                        cgpaHistory.sort((a, b) => a.trimesterNumber - b.trimesterNumber);
-                        
-                        updateCgpaHistoryDisplay();
-                        calculateCGPA();
-                        
-                        // Show success message with GPA
-                        alert(`Trimester ${trimesterNumber} saved successfully!\n\nGPA: ${currentSemester.gpa.toFixed(2)}\nSubjects: ${currentSemester.totalSubjects}\nCredits: ${currentSemester.totalCredits}`);
-                        
-                        // Reset for next trimester
-                        // Auto-advance to next trimester if not the last one
-                        if (parseInt(trimesterNumber) < 6) {
-                            const nextTrimester = parseInt(trimesterNumber) + 1;
-                            trimesterSelect.value = nextTrimester.toString();
-                            resetTrimester();
-                        } else {
-                            resetTrimester();
-                        }
-                        
-                    } else {
-                        alert('Failed to save to database: ' + (data.error || 'Unknown error'));
-                    }
-                })
-                .catch(error => {
-                    console.error('Database save error:', error);
-                    
-                    // Fallback to localStorage
-                    const semesterData = {
-                        semester: trimesterName,
-                        trimesterNumber: trimesterNumber,
-                        date: new Date().toLocaleDateString(),
-                        totalCredits: currentSemester.totalCredits,
-                        totalGradePoints: currentSemester.totalGradePoints,
-                        gpa: currentSemester.gpa,
-                        subjects: currentSubjects
-                    };
-                    
-                    // Check if this trimester already exists in history
-                    const existingIndex = cgpaHistory.findIndex(item => item.trimesterNumber === trimesterNumber);
-                    if (existingIndex !== -1) {
-                        // Update existing trimester
-                        cgpaHistory[existingIndex] = semesterData;
-                    } else {
-                        // Add new trimester
-                        cgpaHistory.push(semesterData);
+                
+                data = await response.json()
+                
+                if data.get('success'):
+                    # Also save locally for immediate display
+                    semester_data = {
+                        'semester': trimester_name,
+                        'trimesterNumber': trimester_number,
+                        'date': new Date().toLocaleDateString(),
+                        'totalCredits': current_semester.get('totalCredits', 0),
+                        'totalGradePoints': current_semester.get('totalGradePoints', 0),
+                        'gpa': current_semester.get('gpa', 0),
+                        'subjects': current_subjects.copy()
                     }
                     
-                    // Sort by trimester number
-                    cgpaHistory.sort((a, b) => a.trimesterNumber - b.trimesterNumber);
+                    # Check if this trimester already exists in history
+                    existing_index = next((i for i, item in enumerate(cgpa_history) 
+                                         if item.get('trimesterNumber') == trimester_number), -1)
                     
-                    // Save to localStorage (optional - for persistence)
-                    // localStorage.setItem('cgpaHistory', JSON.stringify(cgpaHistory));
+                    if existing_index != -1:
+                        # Update existing trimester
+                        cgpa_history[existing_index] = semester_data
+                    else:
+                        # Add new trimester
+                        cgpa_history.append(semester_data)
                     
-                    // Update display
-                    updateCgpaHistoryDisplay();
-                    calculateCGPA();
+                    # Sort by trimester number
+                    cgpa_history.sort(key=lambda x: int(x.get('trimesterNumber', 0)))
                     
-                    // Show success message with GPA
-                    alert(`Trimester ${trimesterNumber} saved!\n\nGPA: ${currentSemester.gpa.toFixed(2)}\nSubjects: ${currentSemester.totalSubjects}\nCredits: ${currentSemester.totalCredits}`);
+                    update_cgpa_history_display()
+                    calculate_cgpa()
                     
-                    // Reset for next trimester
-                    if (parseInt(trimesterNumber) < 6) {
-                        const nextTrimester = parseInt(trimesterNumber) + 1;
-                        trimesterSelect.value = nextTrimester.toString();
-                        resetTrimester();
-                    } else {
-                        resetTrimester();
-                    }
-                });
-            }
-            
-            function updateCgpaHistoryDisplay() {
-                cgpaHistoryEl.innerHTML = '';
+                    # Show success message with GPA
+                    alert(f"Trimester {trimester_number} saved successfully!\n\nGPA: {current_semester.get('gpa', 0):.2f}\nSubjects: {current_semester.get('totalSubjects', 0)}\nCredits: {current_semester.get('totalCredits', 0)}")
+                    
+                    # Reset for next trimester
+                    # Auto-advance to next trimester if not the last one
+                    if int(trimester_number) < 6:
+                        next_trimester = int(trimester_number) + 1
+                        trimester_select.value = str(next_trimester)
+                        reset_trimester()
+                    else:
+                        reset_trimester()
+                else:
+                    alert('Failed to save to database: ' + data.get('error', 'Unknown error'))
+            except Exception as e:
+                console.error('Database save error:', e)
                 
-                if (cgpaHistory.length === 0) {
-                    const emptyMsg = document.createElement('div');
-                    emptyMsg.className = 'history-item';
-                    emptyMsg.style.color = '#7f8c8d';
-                    emptyMsg.style.fontStyle = 'italic';
-                    emptyMsg.textContent = 'No CGPA history yet. Save your first trimester to start tracking.';
-                    cgpaHistoryEl.appendChild(emptyMsg);
-                    return;
+                # Fallback to localStorage
+                semester_data = {
+                    'semester': trimester_name,
+                    'trimesterNumber': trimester_number,
+                    'date': new Date().toLocaleDateString(),
+                    'totalCredits': current_semester.get('totalCredits', 0),
+                    'totalGradePoints': current_semester.get('totalGradePoints', 0),
+                    'gpa': current_semester.get('gpa', 0),
+                    'subjects': current_subjects.copy()
                 }
                 
-                cgpaHistory.forEach((semester, index) => {
-                    const historyItem = document.createElement('div');
-                    historyItem.className = 'history-item';
-                    
-                    const semesterInfo = document.createElement('div');
-                    semesterInfo.innerHTML = `
-                        <strong>${semester.semester}</strong><br>
-                        <small>${semester.date}</small>
-                    `;
-                    
-                    const semesterGrades = document.createElement('div');
-                    semesterGrades.style.textAlign = 'right';
-                    semesterGrades.innerHTML = `
-                        <div style="font-weight: bold;">GPA: ${semester.gpa.toFixed(2)}</div>
-                        <small>Credits: ${semester.totalCredits || 'N/A'}</small><br>
-                        <small>Subjects: ${semester.subjects ? semester.subjects.length : 'N/A'}</small>
-                    `;
-                    
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.className = 'action-btn';
-                    deleteBtn.innerHTML = '×';
-                    deleteBtn.title = 'Remove from history';
-                    deleteBtn.style.marginLeft = '10px';
-                    deleteBtn.onclick = function() {
-                        if (confirm('Remove this trimester from history?')) {
-                            cgpaHistory.splice(index, 1);
-                            // localStorage.setItem('cgpaHistory', JSON.stringify(cgpaHistory));
-                            updateCgpaHistoryDisplay();
-                            calculateCGPA();
-                        }
-                    };
-                    
-                    historyItem.appendChild(semesterInfo);
-                    historyItem.appendChild(semesterGrades);
-                    historyItem.appendChild(deleteBtn);
-                    cgpaHistoryEl.appendChild(historyItem);
-                });
-            }
+                # Check if this trimester already exists in history
+                existing_index = next((i for i, item in enumerate(cgpa_history) 
+                                     if item.get('trimesterNumber') == trimester_number), -1)
+                
+                if existing_index != -1:
+                    # Update existing trimester
+                    cgpa_history[existing_index] = semester_data
+                else:
+                    # Add new trimester
+                    cgpa_history.append(semester_data)
+                
+                # Sort by trimester number
+                cgpa_history.sort(key=lambda x: int(x.get('trimesterNumber', 0)))
+                
+                update_cgpa_history_display()
+                calculate_cgpa()
+                
+                # Show success message with GPA
+                alert(f"Trimester {trimester_number} saved!\n\nGPA: {current_semester.get('gpa', 0):.2f}\nSubjects: {current_semester.get('totalSubjects', 0)}\nCredits: {current_semester.get('totalCredits', 0)}")
+                
+                # Reset for next trimester
+                if int(trimester_number) < 6:
+                    next_trimester = int(trimester_number) + 1
+                    trimester_select.value = str(next_trimester)
+                    reset_trimester()
+                else:
+                    reset_trimester()
+        
+        # Update CGPA history display
+        def update_cgpa_history_display():
+            cgpa_history_el.innerHTML = ''
             
-            function resetTrimester() {
-                if (!confirm('Are you sure you want to reset the current trimester? This will remove all added subjects.')) {
-                    return;
-                }
-                
-                subjectsTbody.innerHTML = '';
-                addedSubjectIds.clear();
-                currentSubjects = [];
-                subjectSelect.value = '';
-                addSubjectBtn.disabled = true;
-                
-                // Reset GPA display
-                gpaResultEl.textContent = '0.00';
-                saveCgpaBtn.disabled = true;
-            }
+            if len(cgpa_history) == 0:
+                empty_msg = document.createElement('div')
+                empty_msg.className = 'history-item'
+                empty_msg.style.color = '#7f8c8d'
+                empty_msg.style.fontStyle = 'italic'
+                empty_msg.textContent = 'No CGPA history yet. Save your first trimester to start tracking.'
+                cgpa_history_el.appendChild(empty_msg)
+                return
             
-            function clearAllHistory() {
-                if (!confirm('Are you sure you want to clear ALL CGPA history? This action cannot be undone.')) {
-                    return;
-                }
+            for index, semester in enumerate(cgpa_history):
+                history_item = document.createElement('div')
+                history_item.className = 'history-item'
                 
-                // Clear localStorage
-                localStorage.removeItem('cgpaHistory');
+                semester_info = document.createElement('div')
+                semester_info.innerHTML = f"""
+                    <strong>{semester.get('semester', '')}</strong><br>
+                    <small>{semester.get('date', '')}</small>
+                """
                 
-                // Clear cgpaHistory array
-                cgpaHistory = [];
+                semester_grades = document.createElement('div')
+                semester_grades.style.textAlign = 'right'
+                semester_grades.innerHTML = f"""
+                    <div style="font-weight: bold;">GPA: {semester.get('gpa', 0):.2f}</div>
+                    <small>Credits: {semester.get('totalCredits', 'N/A')}</small><br>
+                    <small>Subjects: {len(semester.get('subjects', [])) if semester.get('subjects') else 'N/A'}</small>
+                """
                 
-                // Update displays
-                updateCgpaHistoryDisplay();
-                calculateCGPA();
+                delete_btn = document.createElement('button')
+                delete_btn.className = 'action-btn'
+                delete_btn.innerHTML = '×'
+                delete_btn.title = 'Remove from history'
+                delete_btn.style.marginLeft = '10px'
                 
-                alert('All CGPA history has been cleared.');
-            }
+                def make_delete_handler(idx):
+                    def handler():
+                        if confirm('Remove this trimester from history?'):
+                            cgpa_history.pop(idx)
+                            update_cgpa_history_display()
+                            calculate_cgpa()
+                    return handler
+                
+                delete_btn.addEventListener('click', create_proxy(make_delete_handler(index)))
+                
+                history_item.appendChild(semester_info)
+                history_item.appendChild(semester_grades)
+                history_item.appendChild(delete_btn)
+                cgpa_history_el.appendChild(history_item)
+        
+        # Reset trimester
+        def reset_trimester():
+            if not confirm('Are you sure you want to reset the current trimester? This will remove all added subjects.'):
+                return
             
-            function showError(message) {
-                errorMessage.textContent = message;
-                errorMessage.style.display = 'block';
-            }
+            subjects_tbody.innerHTML = ''
+            added_subject_ids.clear()
+            current_subjects.clear()
+            subject_select.value = ''
+            add_subject_btn.disabled = True
             
-            // Initialize GPA display
-            calculateAndDisplayGPA();
-        });
-    </script>
+            # Reset GPA display
+            gpa_result_el.textContent = '0.00'
+            save_cgpa_btn.disabled = True
+        
+        # Clear all history
+        def clear_all_history():
+            if not confirm('Are you sure you want to clear ALL CGPA history? This action cannot be undone.'):
+                return
+            
+            # Clear localStorage
+            localStorage.removeItem('cgpaHistory')
+            
+            # Clear cgpa_history array
+            cgpa_history.clear()
+            
+            # Update displays
+            update_cgpa_history_display()
+            calculate_cgpa()
+            
+            alert('All CGPA history has been cleared.')
+        
+        # Show error message
+        def show_error(message):
+            error_message.textContent = message
+            error_message.style.display = 'block'
+        
+        # Initialize the application
+        asyncio.create_task(initialize())
+    </py-script>
 </body>
 </html>
