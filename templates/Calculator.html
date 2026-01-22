@@ -4,363 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trackademic</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        body {
-            background-color: #f5f7fa;
-            color: #333;
-            line-height: 1.6;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-        
-        .container {
-            width: 100%;
-            max-width: 1200px;
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-        
-        header {
-            background: linear-gradient(135deg, #2c3e50, #4a6491);
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }
-        
-        h1 {
-            font-size: 28px;
-            margin-bottom: 5px;
-        }
-        
-        h2 {
-            font-size: 22px;
-            margin: 25px 0 15px;
-            padding: 0 20px 10px;
-            border-bottom: 2px solid #eaeaea;
-            color: #2c3e50;
-        }
-        
-        table {
-            width: calc(100% - 40px);
-            margin: 0 20px 20px;
-            border-collapse: collapse;
-        }
-        
-        th {
-            background-color: #f8f9fa;
-            padding: 12px 15px;
-            text-align: left;
-            font-weight: 600;
-            color: #2c3e50;
-            border-bottom: 2px solid #eaeaea;
-        }
-        
-        td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #eaeaea;
-        }
-        
-        tr:last-child td {
-            border-bottom: none;
-        }
-        
-        .subject-name {
-            font-weight: 600;
-        }
-        
-        .subject-code {
-            color: #666;
-            font-family: monospace;
-            font-size: 0.9em;
-        }
-        
-        .credit-hours, .grade-select, .grade-points {
-            font-weight: 600;
-            text-align: center;
-        }
-        
-        .grade-select select {
-            width: 80px;
-            padding: 6px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-            background-color: #f8f9fa;
-        }
-        
-        select, input {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            width: 100%;
-            font-size: 14px;
-        }
-        
-        .action-btn {
-            background: none;
-            border: none;
-            color: #666;
-            cursor: pointer;
-            font-size: 18px;
-            padding: 5px;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 4px;
-            transition: background-color 0.2s;
-        }
-        
-        .action-btn:hover {
-            background-color: #f0f0f0;
-        }
-        
-        .trimester-selector {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin: 0 20px;
-            padding: 10px 0;
-        }
-        
-        .trimester-label {
-            font-size: 22px;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-        
-        .trimester-dropdown {
-            width: 200px;
-            font-size: 16px;
-            font-weight: 600;
-            color: #2c3e50;
-            background-color: #f8f9fa;
-            border: 2px solid #ddd;
-        }
-        
-        .add-subject-container {
-            display: flex;
-            justify-content: space-between;
-            margin: 0 20px 30px;
-            gap: 15px;
-            align-items: center;
-        }
-        
-        .subject-select {
-            flex: 1;
-        }
-        
-        .add-btn {
-            background-color: #f8f9fa;
-            color: #333;
-            border: 1px solid #ddd;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s;
-            white-space: nowrap;
-        }
-        
-        .add-btn:hover {
-            background-color: #e9ecef;
-            border-color: #ccc;
-        }
-        
-        .add-btn:disabled {
-            background-color: #f8f9fa;
-            color: #999;
-            cursor: not-allowed;
-            border-color: #eee;
-        }
-        
-        .results-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin: 20px;
-            padding: 20px;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-        }
-        
-        .result-box {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            text-align: center;
-        }
-        
-        .result-label {
-            font-size: 14px;
-            color: #7f8c8d;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .result-value {
-            font-size: 32px;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-        
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-            margin: 20px;
-            justify-content: center;
-        }
-        
-        .save-btn {
-            background-color: #f8f9fa;
-            color: #333;
-            border: 1px solid #ddd;
-            padding: 12px 25px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .save-btn:hover {
-            background-color: #e9ecef;
-            border-color: #ccc;
-        }
-        
-        .save-btn:disabled {
-            background-color: #f8f9fa;
-            color: #999;
-            cursor: not-allowed;
-            border-color: #eee;
-        }
-        
-        .reset-btn {
-            background-color: #f8f9fa;
-            color: #333;
-            border: 1px solid #ddd;
-            padding: 12px 25px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .reset-btn:hover {
-            background-color: #e9ecef;
-            border-color: #ccc;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #7f8c8d;
-            margin: 0 20px;
-        }
-        
-        .error {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-            background-color: #f8f9fa;
-            margin: 0 20px 20px;
-            border-radius: 4px;
-            border: 1px solid #eee;
-        }
-        
-        .info-message {
-            text-align: center;
-            padding: 15px;
-            color: #7f8c8d;
-            background-color: #f8f9fa;
-            margin: 0 20px;
-            border-radius: 4px;
-            font-size: 14px;
-            border-left: 3px solid #ddd;
-        }
-        
-        .cgpa-history {
-            margin: 20px;
-            padding: 20px;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            margin-bottom: 10px;
-        }
-        
-        .cgpa-summary {
-            margin: 0 20px 20px;
-            padding: 20px;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-        }
-        
-        .history-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px;
-            border-bottom: 1px solid #eaeaea;
-        }
-        
-        .history-item:last-child {
-            border-bottom: none;
-        }
-        
-        @media (max-width: 768px) {
-            table {
-                display: block;
-                overflow-x: auto;
-            }
-            
-            th, td {
-                white-space: nowrap;
-            }
-            
-            .trimester-selector {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-            }
-            
-            .trimester-dropdown {
-                width: 100%;
-            }
-            
-            .add-subject-container {
-                flex-direction: column;
-            }
-            
-            .results-container {
-                grid-template-columns: 1fr;
-            }
-            
-            .action-buttons {
-                flex-direction: column;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='calculator.css') }}">
 </head>
 <body>
     <div class="container">
@@ -373,26 +17,43 @@
         </div>
     </header>
         
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="flash-message {{ category }}" style="margin: 10px 20px; padding: 10px; background-color: {% if category == 'success' %}#d4edda{% else %}#f8d7da{% endif %}; color: {% if category == 'success' %}#155724{% else %}#721c24{% endif %}; border-radius: 4px; border: 1px solid {% if category == 'success' %}#c3e6cb{% else %}#f5c6cb{% endif %};">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
         <!-- Trimester Selector Section -->
         <div class="trimester-selector">
             <div class="trimester-label">Current Trimester:</div>
-            <select id="trimester-select" class="trimester-dropdown">
-                <option value="1">Trimester 1</option>
-                <option value="2">Trimester 2</option>
-                <option value="3">Trimester 3</option>
-                <option value="4">Trimester 4</option>
-                <option value="5">Trimester 5</option>
-                <option value="6">Trimester 6</option>
-            </select>
+            <form method="POST" action="/trackademic/calculator" style="display: inline;">
+                <input type="hidden" name="action" value="change_trimester">
+                <select name="current_trimester" class="trimester-dropdown" onchange="this.form.submit()">
+                    {% for i in range(1, 7) %}
+                    <option value="{{ i }}" {% if current_trimester == i %}selected{% endif %}>Trimester {{ i }}</option>
+                    {% endfor %}
+                </select>
+            </form>
         </div>
         
-        <div class="add-subject-container">
-            <select id="subject-select" class="subject-select">
+        <!-- Add Subject Form -->
+        <form method="POST" action="/trackademic/calculator" class="add-subject-container">
+            <input type="hidden" name="action" value="add_subject">
+            <select name="subject_to_add" class="subject-select">
                 <option value="">Select a subject to add...</option>
+                {% for subject in all_subjects %}
+                <option value="{{ subject.id }}">{{ subject.code }} - {{ subject.name }} ({{ subject.credits }} credits)</option>
+                {% endfor %}
             </select>
-            <button class="add-btn" id="add-subject-btn" disabled>+ Add Subject</button>
-        </div>
+            <button type="submit" class="add-btn" {% if not all_subjects %}disabled{% endif %}>+ Add Subject</button>
+        </form>
         
+        <!-- Subjects Table -->
         <table>
             <thead>
                 <tr>
@@ -405,577 +66,119 @@
                 </tr>
             </thead>
             <tbody id="subjects-tbody">
-                <!-- Subjects will be loaded here dynamically -->
+                {% if current_subjects %}
+                    {% for subject in current_subjects %}
+                    <tr>
+                        <td class="subject-name">{{ subject.name }}</td>
+                        <td class="subject-code">{{ subject.code }}</td>
+                        <td class="credit-hours">{{ subject.credits }}</td>
+                        <td class="grade-select">
+                            <form method="POST" action="/trackademic/calculator" style="display: inline;">
+                                <input type="hidden" name="action" value="update_grade_{{ subject.id }}">
+                                <select name="grade_{{ subject.id }}" onchange="this.form.submit()">
+                                    <option value="">Select Grade</option>
+                                    {% for grade, points in grade_scale.items() %}
+                                    <option value="{{ grade }}" {% if subject.grade == grade %}selected{% endif %}>{{ grade }}</option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+                        </td>
+                        <td class="grade-points" id="grade-points-{{ subject.id }}">
+                            {% if subject.grade and subject.grade in grade_scale %}
+                            {{ "%.2f"|format(grade_scale[subject.grade]) }}
+                            {% else %}
+                            0.00
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form method="POST" action="/trackademic/calculator" style="display: inline;">
+                                <input type="hidden" name="action" value="remove_subject_{{ subject.id }}">
+                                <button type="submit" class="action-btn" title="Delete subject" onclick="return confirm('Remove this subject?')">
+                                    ×
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 20px; color: #7f8c8d;">
+                            No subjects added yet. Select a subject from the dropdown above.
+                        </td>
+                    </tr>
+                {% endif %}
             </tbody>
         </table>
-        
-        <div id="loading-message" class="loading">Loading subjects from database...</div>
-        <div id="error-message" class="error" style="display: none;"></div>
         
         <!-- Real-time GPA Display -->
         <div class="results-container">
             <div class="result-box" id="gpa-box">
                 <div class="result-label">GPA (Current Trimester)</div>
-                <div class="result-value" id="gpa-result">0.00</div>
+                <div class="result-value" id="gpa-result">{{ "%.2f"|format(current_gpa_data.gpa) }}</div>
             </div>
         </div>
         
+        <!-- Action Buttons -->
         <div class="action-buttons">
-            <button class="save-btn" id="save-cgpa-btn" disabled>
-                Save Trimester
-            </button>
-            <button class="reset-btn" id="reset-btn">
-                Reset Trimester
-            </button>
-            <button class="reset-btn" id="clear-history-btn">
-                Clear All History
-            </button>
+            <form method="POST" action="/trackademic/calculator" style="display: inline;">
+                <input type="hidden" name="action" value="save_trimester">
+                <button type="submit" class="save-btn" {% if not current_subjects or current_gpa_data.subjects_without_grades > 0 %}disabled{% endif %}>
+                    Save Trimester
+                </button>
+            </form>
+            
+            <form method="POST" action="/trackademic/calculator" style="display: inline;">
+                <input type="hidden" name="action" value="reset_trimester">
+                <button type="submit" class="reset-btn" onclick="return confirm('Reset current trimester? All subjects will be removed.')">
+                    Reset Trimester
+                </button>
+            </form>
+            
+            <form method="POST" action="/trackademic/calculator" style="display: inline;">
+                <input type="hidden" name="action" value="clear_history">
+                <button type="submit" class="reset-btn" onclick="return confirm('Clear ALL CGPA history? This cannot be undone.')">
+                    Clear All History
+                </button>
+            </form>
         </div>
         
+        <!-- CGPA History -->
         <h2>CGPA History</h2>
         <div class="cgpa-history" id="cgpa-history">
-            <div class="history-item" style="color: #7f8c8d; font-style: italic;">
-                No CGPA history yet. Save your first trimester to start tracking.
-            </div>
+            {% if cgpa_history %}
+                {% for semester in cgpa_history %}
+                <div class="history-item">
+                    <div>
+                        <strong>{{ semester.semester }}</strong><br>
+                        <small>{{ semester.date }}</small>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-weight: bold;">GPA: {{ "%.2f"|format(semester.gpa) }}</div>
+                        <small>Credits: {{ semester.total_credits }}</small><br>
+                        <small>Subjects: {{ semester.subjects|length }}</small>
+                    </div>
+                    <div style="margin-left: 10px;">
+                        <form method="POST" action="/trackademic/calculator" style="display: inline;">
+                            <input type="hidden" name="action" value="remove_history_{{ semester.trimester_number }}">
+                            <button type="submit" class="action-btn" title="Remove from history" onclick="return confirm('Remove this trimester from history?')">
+                                ×
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="history-item" style="color: #7f8c8d; font-style: italic;">
+                    No CGPA history yet. Save your first trimester to start tracking.
+                </div>
+            {% endif %}
         </div>
         
+        <!-- Overall CGPA -->
         <div class="cgpa-summary">
             <div class="result-label">CGPA</div>
-            <div class="result-value" id="cgpa-result">0.00</div>
+            <div class="result-value" id="cgpa-result">{{ "%.2f"|format(overall_cgpa) }}</div>
         </div>
     </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const API_BASE_URL = 'http://localhost:5000';
-            let allSubjects = [];
-            let addedSubjectIds = new Set();
-            let currentSubjects = []; // Track subjects with grades
-            let cgpaHistory = []; // Start with empty history
-            
-            // Grade mapping
-            const gradeScale = {
-                'A+': 4.00,
-                'A': 4.00,
-                'A-': 3.67,
-                'B+': 3.33,
-                'B': 3.00,
-                'B-': 2.67,
-                'C+': 2.33,
-                'C': 2.00,
-                'C-': 1.67,
-                'D+': 1.33,
-                'D': 1.00,
-                'F': 0.00
-            };
-            
-            // DOM elements
-            const trimesterSelect = document.getElementById('trimester-select');
-            const subjectSelect = document.getElementById('subject-select');
-            const addSubjectBtn = document.getElementById('add-subject-btn');
-            const subjectsTbody = document.getElementById('subjects-tbody');
-            const loadingMessage = document.getElementById('loading-message');
-            const errorMessage = document.getElementById('error-message');
-            const saveCgpaBtn = document.getElementById('save-cgpa-btn');
-            const resetBtn = document.getElementById('reset-btn');
-            const clearHistoryBtn = document.getElementById('clear-history-btn');
-            const gpaResultEl = document.getElementById('gpa-result');
-            const cgpaResultEl = document.getElementById('cgpa-result');
-            const cgpaHistoryEl = document.getElementById('cgpa-history');
-            
-            // Initialize the application - START FRESH
-            loadAllSubjects();
-            initializeFreshState(); // Start with empty history
-            
-            // Event listeners
-            subjectSelect.addEventListener('change', function() {
-                addSubjectBtn.disabled = !this.value;
-            });
-            
-            trimesterSelect.addEventListener('change', function() {
-                const trimesterNumber = this.value;
-                console.log(`Switched to Trimester ${trimesterNumber}`);
-                resetTrimester();
-            });
-            
-            addSubjectBtn.addEventListener('click', addSelectedSubject);
-            saveCgpaBtn.addEventListener('click', saveToCgpaHistory);
-            resetBtn.addEventListener('click', resetTrimester);
-            clearHistoryBtn.addEventListener('click', clearAllHistory);
-            
-            function initializeFreshState() {
-                // Clear any existing localStorage data
-                localStorage.removeItem('cgpaHistory');
-                
-                // Reset cgpaHistory to empty array
-                cgpaHistory = [];
-                
-                // Update displays
-                updateCgpaHistoryDisplay();
-                calculateCGPA();
-                
-                console.log('Started with fresh state - no previous history loaded');
-            }
-            
-            function loadAllSubjects() {
-                fetch(`${API_BASE_URL}/api/subjects`)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Failed to load subjects from database');
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (data.success) {
-                            allSubjects = data.subjects;
-                            populateSubjectSelect();
-                            loadingMessage.style.display = 'none';
-                            console.log(`Loaded ${allSubjects.length} subjects from database`);
-                        } else {
-                            throw new Error(data.error || 'Failed to load subjects');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error loading subjects:', error);
-                        showError(`Error loading subjects: ${error.message}. Please make sure the backend server is running at http://localhost:5000`);
-                        loadingMessage.textContent = 'Failed to load subjects from database. Check if Flask server is running.';
-                    });
-            }
-            
-            function populateSubjectSelect() {
-                subjectSelect.innerHTML = '<option value="">Select a subject to add...</option>';
-                
-                if (allSubjects.length === 0) {
-                    const option = document.createElement('option');
-                    option.value = '';
-                    option.textContent = 'No subjects available. Please add subjects to database.';
-                    subjectSelect.appendChild(option);
-                    return;
-                }
-                
-                allSubjects.forEach(subject => {
-                    const option = document.createElement('option');
-                    option.value = subject.id;
-                    option.textContent = `${subject.code} - ${subject.name} (${subject.credits} credits)`;
-                    option.dataset.subject = JSON.stringify(subject);
-                    subjectSelect.appendChild(option);
-                });
-            }
-            
-            function addSelectedSubject() {
-                const selectedOption = subjectSelect.options[subjectSelect.selectedIndex];
-                if (!selectedOption.value) return;
-                
-                const subject = JSON.parse(selectedOption.dataset.subject);
-                
-                // Check if subject already added
-                if (addedSubjectIds.has(subject.id)) {
-                    alert('This subject has already been added to the trimester.');
-                    return;
-                }
-                
-                addSubjectToTable(subject);
-                addedSubjectIds.add(subject.id);
-                subjectSelect.value = '';
-                addSubjectBtn.disabled = true;
-            }
-            
-            function addSubjectToTable(subject) {
-                const row = document.createElement('tr');
-                row.dataset.subjectId = subject.id;
-                row.dataset.credits = subject.credits;
-                
-                const gradeSelect = createGradeSelect();
-                
-                row.innerHTML = `
-                    <td class="subject-name">${subject.name}</td>
-                    <td class="subject-code">${subject.code}</td>
-                    <td class="credit-hours">${subject.credits}</td>
-                    <td class="grade-select">${gradeSelect.outerHTML}</td>
-                    <td class="grade-points" id="grade-points-${subject.id}">0.00</td>
-                    <td>
-                        <button class="action-btn" title="Delete subject">
-                            ×
-                        </button>
-                    </td>
-                `;
-                
-                subjectsTbody.appendChild(row);
-                
-                // Track this subject
-                const subjectWithGrade = {
-                    id: subject.id,
-                    name: subject.name,
-                    code: subject.code,
-                    credits: subject.credits,
-                    grade: '',
-                    trimester: trimesterSelect.value
-                };
-                currentSubjects.push(subjectWithGrade);
-                
-                // Add event listener for grade selection
-                const gradeSelectElement = row.querySelector('.grade-select select');
-                gradeSelectElement.addEventListener('change', function() {
-                    updateGradePoints(subject.id, this.value);
-                    
-                    // Update the subject's grade in currentSubjects array
-                    const subjectIndex = currentSubjects.findIndex(s => s.id === subject.id);
-                    if (subjectIndex !== -1) {
-                        currentSubjects[subjectIndex].grade = this.value;
-                    }
-                    
-                    // Recalculate and update GPA display
-                    calculateAndDisplayGPA();
-                });
-                
-                // Add delete functionality
-                row.querySelector('.action-btn').addEventListener('click', function() {
-                    const subjectId = parseInt(row.dataset.subjectId);
-                    addedSubjectIds.delete(subjectId);
-                    
-                    // Remove from currentSubjects array
-                    const subjectIndex = currentSubjects.findIndex(s => s.id === subjectId);
-                    if (subjectIndex !== -1) {
-                        currentSubjects.splice(subjectIndex, 1);
-                    }
-                    
-                    row.remove();
-                    calculateAndDisplayGPA();
-                });
-            }
-            
-            function createGradeSelect() {
-                const select = document.createElement('select');
-                select.innerHTML = '<option value="">Select Grade</option>';
-                
-                for (const grade in gradeScale) {
-                    const option = document.createElement('option');
-                    option.value = grade;
-                    option.textContent = grade;
-                    select.appendChild(option);
-                }
-                
-                return select;
-            }
-            
-            function updateGradePoints(subjectId, grade) {
-                const gradePoints = gradeScale[grade] || 0;
-                const gradePointsEl = document.getElementById(`grade-points-${subjectId}`);
-                if (gradePointsEl) {
-                    gradePointsEl.textContent = gradePoints.toFixed(2);
-                }
-            }
-            
-            function calculateAndDisplayGPA() {
-                const gpaData = calculateGPA();
-                updateGPADisplay(gpaData);
-                return gpaData;
-            }
-            
-            function calculateGPA() {
-                let totalCredits = 0;
-                let totalGradePoints = 0;
-                let subjectsWithGrades = 0;
-                let subjectsWithoutGrades = 0;
-                
-                currentSubjects.forEach(subject => {
-                    const grade = subject.grade;
-                    const credits = subject.credits;
-                    
-                    if (grade && grade in gradeScale) {
-                        const gradePoints = gradeScale[grade];
-                        const subjectGradePoints = credits * gradePoints;
-                        
-                        totalCredits += credits;
-                        totalGradePoints += subjectGradePoints;
-                        subjectsWithGrades++;
-                    } else {
-                        subjectsWithoutGrades++;
-                    }
-                });
-                
-                const gpa = totalCredits > 0 ? (totalGradePoints / totalCredits) : 0;
-                
-                return { 
-                    totalCredits, 
-                    totalGradePoints, 
-                    gpa,
-                    subjectsWithGrades,
-                    subjectsWithoutGrades,
-                    totalSubjects: currentSubjects.length
-                };
-            }
-            
-            function updateGPADisplay(gpaData) {
-                const { gpa, subjectsWithoutGrades, totalSubjects } = gpaData;
-                
-                // Update the GPA value
-                gpaResultEl.textContent = gpa.toFixed(2);
-                
-                // Enable/disable save button based on status
-                if (totalSubjects === 0) {
-                    saveCgpaBtn.disabled = true;
-                } else if (subjectsWithoutGrades > 0) {
-                    saveCgpaBtn.disabled = true;
-                } else {
-                    saveCgpaBtn.disabled = false;
-                }
-            }
-            
-            function calculateCGPA() {
-                if (cgpaHistory.length === 0) {
-                    cgpaResultEl.textContent = '0.00';
-                    return 0;
-                }
-                
-                let totalCumulativeCredits = 0;
-                let totalCumulativeGradePoints = 0;
-                
-                cgpaHistory.forEach(semester => {
-                    totalCumulativeCredits += semester.totalCredits || 0;
-                    totalCumulativeGradePoints += semester.totalGradePoints || 0;
-                });
-                
-                const cgpa = totalCumulativeCredits > 0 ? 
-                    (totalCumulativeGradePoints / totalCumulativeCredits) : 0;
-                
-                cgpaResultEl.textContent = cgpa.toFixed(2);
-                
-                return cgpa;
-            }
-            
-            function saveToCgpaHistory() {
-                const currentSemester = calculateGPA();
-                
-                if (currentSemester.totalCredits === 0) {
-                    alert('Please add subjects before saving.');
-                    return;
-                }
-                
-                // Check if any subject is missing a grade
-                let hasMissingGrades = false;
-                currentSubjects.forEach(subject => {
-                    if (!subject.grade) {
-                        hasMissingGrades = true;
-                    }
-                });
-                
-                if (hasMissingGrades) {
-                    alert('Please select grades for all subjects before saving.');
-                    return;
-                }
-                
-                // Get the current trimester number from dropdown
-                const trimesterNumber = trimesterSelect.value;
-                const trimesterName = `Trimester ${trimesterNumber}`;
-                
-                // Prepare data for database save
-                const saveData = {
-                    trimester: trimesterName,
-                    gpa: currentSemester.gpa,
-                    trimesterNumber: trimesterNumber,
-                    totalCredits: currentSemester.totalCredits,
-                    totalGradePoints: currentSemester.totalGradePoints,
-                    subjects: currentSubjects
-                };
-                
-                // Try to save to database
-                fetch(`${API_BASE_URL}/api/save-trimester`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(saveData)
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Also save locally for immediate display
-                        const semesterData = {
-                            semester: trimesterName,
-                            trimesterNumber: trimesterNumber,
-                            date: new Date().toLocaleDateString(),
-                            totalCredits: currentSemester.totalCredits,
-                            totalGradePoints: currentSemester.totalGradePoints,
-                            gpa: currentSemester.gpa,
-                            subjects: currentSubjects
-                        };
-                        
-                        // Check if this trimester already exists in history
-                        const existingIndex = cgpaHistory.findIndex(item => item.trimesterNumber === trimesterNumber);
-                        if (existingIndex !== -1) {
-                            // Update existing trimester
-                            cgpaHistory[existingIndex] = semesterData;
-                        } else {
-                            // Add new trimester
-                            cgpaHistory.push(semesterData);
-                        }
-                        
-                        // Sort by trimester number
-                        cgpaHistory.sort((a, b) => a.trimesterNumber - b.trimesterNumber);
-                        
-                        updateCgpaHistoryDisplay();
-                        calculateCGPA();
-                        
-                        // Show success message with GPA
-                        alert(`Trimester ${trimesterNumber} saved successfully!\n\nGPA: ${currentSemester.gpa.toFixed(2)}\nSubjects: ${currentSemester.totalSubjects}\nCredits: ${currentSemester.totalCredits}`);
-                        
-                        // Reset for next trimester
-                        // Auto-advance to next trimester if not the last one
-                        if (parseInt(trimesterNumber) < 6) {
-                            const nextTrimester = parseInt(trimesterNumber) + 1;
-                            trimesterSelect.value = nextTrimester.toString();
-                            resetTrimester();
-                        } else {
-                            resetTrimester();
-                        }
-                        
-                    } else {
-                        alert('Failed to save to database: ' + (data.error || 'Unknown error'));
-                    }
-                })
-                .catch(error => {
-                    console.error('Database save error:', error);
-                    
-                    // Fallback to localStorage
-                    const semesterData = {
-                        semester: trimesterName,
-                        trimesterNumber: trimesterNumber,
-                        date: new Date().toLocaleDateString(),
-                        totalCredits: currentSemester.totalCredits,
-                        totalGradePoints: currentSemester.totalGradePoints,
-                        gpa: currentSemester.gpa,
-                        subjects: currentSubjects
-                    };
-                    
-                    // Check if this trimester already exists in history
-                    const existingIndex = cgpaHistory.findIndex(item => item.trimesterNumber === trimesterNumber);
-                    if (existingIndex !== -1) {
-                        // Update existing trimester
-                        cgpaHistory[existingIndex] = semesterData;
-                    } else {
-                        // Add new trimester
-                        cgpaHistory.push(semesterData);
-                    }
-                    
-                    // Sort by trimester number
-                    cgpaHistory.sort((a, b) => a.trimesterNumber - b.trimesterNumber);
-                    
-                    // Save to localStorage (optional - for persistence)
-                    // localStorage.setItem('cgpaHistory', JSON.stringify(cgpaHistory));
-                    
-                    // Update display
-                    updateCgpaHistoryDisplay();
-                    calculateCGPA();
-                    
-                    // Show success message with GPA
-                    alert(`Trimester ${trimesterNumber} saved!\n\nGPA: ${currentSemester.gpa.toFixed(2)}\nSubjects: ${currentSemester.totalSubjects}\nCredits: ${currentSemester.totalCredits}`);
-                    
-                    // Reset for next trimester
-                    if (parseInt(trimesterNumber) < 6) {
-                        const nextTrimester = parseInt(trimesterNumber) + 1;
-                        trimesterSelect.value = nextTrimester.toString();
-                        resetTrimester();
-                    } else {
-                        resetTrimester();
-                    }
-                });
-            }
-            
-            function updateCgpaHistoryDisplay() {
-                cgpaHistoryEl.innerHTML = '';
-                
-                if (cgpaHistory.length === 0) {
-                    const emptyMsg = document.createElement('div');
-                    emptyMsg.className = 'history-item';
-                    emptyMsg.style.color = '#7f8c8d';
-                    emptyMsg.style.fontStyle = 'italic';
-                    emptyMsg.textContent = 'No CGPA history yet. Save your first trimester to start tracking.';
-                    cgpaHistoryEl.appendChild(emptyMsg);
-                    return;
-                }
-                
-                cgpaHistory.forEach((semester, index) => {
-                    const historyItem = document.createElement('div');
-                    historyItem.className = 'history-item';
-                    
-                    const semesterInfo = document.createElement('div');
-                    semesterInfo.innerHTML = `
-                        <strong>${semester.semester}</strong><br>
-                        <small>${semester.date}</small>
-                    `;
-                    
-                    const semesterGrades = document.createElement('div');
-                    semesterGrades.style.textAlign = 'right';
-                    semesterGrades.innerHTML = `
-                        <div style="font-weight: bold;">GPA: ${semester.gpa.toFixed(2)}</div>
-                        <small>Credits: ${semester.totalCredits || 'N/A'}</small><br>
-                        <small>Subjects: ${semester.subjects ? semester.subjects.length : 'N/A'}</small>
-                    `;
-                    
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.className = 'action-btn';
-                    deleteBtn.innerHTML = '×';
-                    deleteBtn.title = 'Remove from history';
-                    deleteBtn.style.marginLeft = '10px';
-                    deleteBtn.onclick = function() {
-                        if (confirm('Remove this trimester from history?')) {
-                            cgpaHistory.splice(index, 1);
-                            // localStorage.setItem('cgpaHistory', JSON.stringify(cgpaHistory));
-                            updateCgpaHistoryDisplay();
-                            calculateCGPA();
-                        }
-                    };
-                    
-                    historyItem.appendChild(semesterInfo);
-                    historyItem.appendChild(semesterGrades);
-                    historyItem.appendChild(deleteBtn);
-                    cgpaHistoryEl.appendChild(historyItem);
-                });
-            }
-            
-            function resetTrimester() {
-                if (!confirm('Are you sure you want to reset the current trimester? This will remove all added subjects.')) {
-                    return;
-                }
-                
-                subjectsTbody.innerHTML = '';
-                addedSubjectIds.clear();
-                currentSubjects = [];
-                subjectSelect.value = '';
-                addSubjectBtn.disabled = true;
-                
-                // Reset GPA display
-                gpaResultEl.textContent = '0.00';
-                saveCgpaBtn.disabled = true;
-            }
-            
-            function clearAllHistory() {
-                if (!confirm('Are you sure you want to clear ALL CGPA history? This action cannot be undone.')) {
-                    return;
-                }
-                
-                // Clear localStorage
-                localStorage.removeItem('cgpaHistory');
-                
-                // Clear cgpaHistory array
-                cgpaHistory = [];
-                
-                // Update displays
-                updateCgpaHistoryDisplay();
-                calculateCGPA();
-                
-                alert('All CGPA history has been cleared.');
-            }
-            
-            function showError(message) {
-                errorMessage.textContent = message;
-                errorMessage.style.display = 'block';
-            }
-            
-            // Initialize GPA display
-            calculateAndDisplayGPA();
-        });
-    </script>
 </body>
 </html>

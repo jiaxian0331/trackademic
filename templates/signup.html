@@ -12,11 +12,19 @@
     <div class="side-image"></div>
     <div class="form-box glass">
         <h2>Create an account</h2>
+        
+        {% if error %}
+        <div class="error-message" style="color: red; background: #ffe6e6; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+            {{ error }}
+        </div>
+        {% endif %}
+        
         <form action="/signup" method="POST">
             <input type="text" name="username" placeholder="Username" required>
             <input type="email" name="email" placeholder="Email" required>
             <input type="password" name="password" placeholder="Password" required>
             <input type="password" name="confirm_password" placeholder="Confirm Password" required>
+            
             <button class="button" type="submit">Create account</button>
         </form>
 

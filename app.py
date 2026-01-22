@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, session, url_for, flash, jsonify, json
 from flask_cors import CORS
 import sqlite3
 import os
@@ -13,7 +13,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 def get_db_connection(database='trackademic.db'):
     """Get database connection for trackademic database"""
     try:
-        conn = sqlite3.connect(database)
+        conn = sqlite3.connect(database, timeout=10)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
         return conn
@@ -47,11 +47,13 @@ def init_databases():
     CREATE TABLE IF NOT EXISTS timetable (
         timetable_id INTEGER PRIMARY KEY AUTOINCREMENT,
         subject_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
         day INTEGER NOT NULL,
         time_slot TEXT NOT NULL,
         task_description TEXT DEFAULT '',
         FOREIGN KEY (subject_id) REFERENCES subjects(subject_id),
-        UNIQUE(day, time_slot)
+        FOREIGN KEY (user_id) REFERENCES trackademic_users(user_id),
+        UNIQUE(user_id, day, time_slot)
     )
     ''')
     
@@ -143,6 +145,46 @@ def init_databases():
     
     # Check if admin exists, if not create one
     create_admin_user()
+
+    conn = get_db_connection('trackademic.db')
+    cursor = conn.cursor()
+    
+    # Check if user_id column exists
+    cursor.execute("PRAGMA table_info(timetable)")
+    columns = [column[1] for column in cursor.fetchall()]
+    
+    if 'user_id' not in columns:
+        # Create a temporary table with the new schema
+        cursor.execute('''
+            CREATE TABLE timetable_new (
+                timetable_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                subject_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                day INTEGER NOT NULL,
+                time_slot TEXT NOT NULL,
+                task_description TEXT DEFAULT '',
+                FOREIGN KEY (subject_id) REFERENCES subjects(subject_id),
+                FOREIGN KEY (user_id) REFERENCES trackademic_users(user_id),
+                UNIQUE(user_id, day, time_slot)
+            )
+        ''')
+        
+        # Copy existing data with default user_id (admin user)
+        cursor.execute("SELECT user_id FROM trackademic_users WHERE email='admin@login.com'")
+        admin_id = cursor.fetchone()
+        if admin_id:
+            admin_id = admin_id[0]
+            cursor.execute('''
+                INSERT INTO timetable_new (subject_id, user_id, day, time_slot, task_description)
+                SELECT subject_id, ?, day, time_slot, task_description FROM timetable
+            ''', (admin_id,))
+        
+        # Drop old table and rename new one
+        cursor.execute('DROP TABLE timetable')
+        cursor.execute('ALTER TABLE timetable_new RENAME TO timetable')
+    
+    conn.commit()
+    conn.close()
 
 def create_admin_user():
     """Create admin user if it doesn't exist"""
@@ -457,48 +499,62 @@ def signup():
         username = request.form['username']
         email = request.form['email']
         password = request.form['password']
-        app_choice = request.form.get('app_choice', 'trackademic')
+        confirm_password = request.form.get('confirm_password', '')
+        
+        # Add password confirmation check
+        if password != confirm_password:
+            return render_template('signup.html', error="Passwords do not match.")
         
         # Prevent using admin email
         if email == 'admin@login.com':
             return render_template('signup.html', error="This email is reserved for admin.")
         
+        trackademic_conn = None
+        social_db = None
+        
         try:
-            # Create user in both databases
-            conn = get_db_connection()
-            conn.execute(
+            # Create user in trackademic database
+            trackademic_conn = get_db_connection()  # trackademic.db
+            trackademic_conn.execute(
                 "INSERT INTO trackademic_users (username, email, password, is_admin) VALUES (?, ?, ?, 0)",
                 (username, email, password)
             )
-            conn.commit()
-            conn.close()
+            trackademic_conn.commit()
             
-            db = get_social_db_connection()
-            db.execute(
+            # Create user in social database
+            social_db = get_social_db_connection()  # social.db
+            social_db.execute(
                 "INSERT INTO users (username, email, password, is_admin) VALUES (?, ?, ?, 0)",
                 (username, email, password)
             )
-            db.commit()
-            db.close()
+            social_db.commit()
             
             # Get user ID from social DB
-            db = get_social_db_connection()
-            cursor = db.execute("SELECT * FROM users WHERE email=?", (email,))
+            cursor = social_db.execute("SELECT * FROM users WHERE email=?", (email,))
             user = cursor.fetchone()
-            db.close()
+            
+            if not user:
+                return render_template('signup.html', error="Error creating account. Please try again.")
             
             session['user_id'] = user['id']
             session['username'] = username
-            session['app_mode'] = app_choice
+            session['app_mode'] = 'trackademic'  # Default to trackademic
             session['is_admin'] = 0  # Regular user
             
-            if app_choice == 'social':
-                return redirect('/social/dashboard')
-            else:
-                return redirect('/trackademic')
+            # Redirect to trackademic by default
+            return redirect('/trackademic')
                 
         except sqlite3.IntegrityError:
             return render_template('signup.html', error="Email already exists.")
+        except Exception as e:
+            print(f"Signup error: {e}")
+            return render_template('signup.html', error=f"Error creating account: {str(e)}")
+        finally:
+            # Ensure connections are closed
+            if trackademic_conn:
+                trackademic_conn.close()
+            if social_db:
+                social_db.close()
     
     return render_template('signup.html')
 
@@ -719,7 +775,7 @@ def list_subjects():
         conn.close()
         
         if not subjects:
-            return '<h1>No subjects found.</h1><p><a href="/trackademic/reset-subjects">Reset subjects database</a></p>'
+            return '<h1>No subjects found.</h1><p><a href="/trackademic/create-subjects-db">Reset subjects database</a></p>'
         
         html = '<h1>All Subjects</h1>'
         html += '<p><a href="/trackademic/add-subject-form-db">+ Add New Subject</a></p>'
@@ -909,17 +965,275 @@ def delete_user(user_id):
     except Exception as e:
         return f'<h1>Error deleting user! {str(e)}</h1><p><a href="/trackademic/user">Back to users</a></p>'
 
-# ============ TRACKADEMIC CALCULATOR ROUTE ============
-@app.route('/trackademic/calculator')
+# ============ CALCULATOR HELPER FUNCTIONS ============
+def calculate_gpa_server(subjects):
+    """Server-side GPA calculation"""
+    GRADE_SCALE = {
+        'A+': 4.00,
+        'A': 4.00,
+        'A-': 3.67,
+        'B+': 3.33,
+        'B': 3.00,
+        'B-': 2.67,
+        'C+': 2.33,
+        'C': 2.00,
+        'C-': 1.67,
+        'D+': 1.33,
+        'D': 1.00,
+        'F': 0.00
+    }
+    
+    total_credits = 0
+    total_grade_points = 0
+    subjects_with_grades = 0
+    subjects_without_grades = 0
+    
+    for subject in subjects:
+        grade = subject.get('grade', '')
+        credits = subject.get('credits', 0)
+        
+        if grade and grade in GRADE_SCALE:
+            grade_points = GRADE_SCALE[grade]
+            subject_grade_points = credits * grade_points
+            
+            total_credits += credits
+            total_grade_points += subject_grade_points
+            subjects_with_grades += 1
+        else:
+            subjects_without_grades += 1
+    
+    gpa = total_grade_points / total_credits if total_credits > 0 else 0
+    
+    return {
+        'total_credits': total_credits,
+        'total_grade_points': total_grade_points,
+        'gpa': gpa,
+        'subjects_with_grades': subjects_with_grades,
+        'subjects_without_grades': subjects_without_grades,
+        'total_subjects': len(subjects)
+    }
+
+def calculate_cgpa_server(history):
+    """Server-side CGPA calculation"""
+    if not history:
+        return 0.0
+    
+    total_cumulative_credits = 0
+    total_cumulative_grade_points = 0
+    
+    for semester in history:
+        total_cumulative_credits += semester.get('total_credits', 0)
+        total_cumulative_grade_points += semester.get('total_grade_points', 0)
+    
+    cgpa = total_cumulative_grade_points / total_cumulative_credits if total_cumulative_credits > 0 else 0
+    return cgpa
+
+# ============ CALCULATOR ROUTE ============
+@app.route('/trackademic/calculator', methods=['GET', 'POST'])
 def calculator():
-    """Trackademic GPA Calculator"""
+    """Trackademic GPA Calculator - Server-side version"""
     if 'user_id' not in session:
         return redirect('/login')
     
     session['app_mode'] = 'trackademic'
     
-    # Render the calculator template
-    return render_template('Calculator.html')
+    # Grade scale for template
+    GRADE_SCALE = {
+        'A+': 4.00,
+        'A': 4.00,
+        'A-': 3.67,
+        'B+': 3.33,
+        'B': 3.00,
+        'B-': 2.67,
+        'C+': 2.33,
+        'C': 2.00,
+        'C-': 1.67,
+        'D+': 1.33,
+        'D': 1.00,
+        'F': 0.00
+    }
+    
+    # Initialize session variables if they don't exist
+    if 'calculator_current_trimester' not in session:
+        session['calculator_current_trimester'] = 1
+    if 'calculator_current_subjects' not in session:
+        session['calculator_current_subjects'] = []
+    if 'calculator_cgpa_history' not in session:
+        session['calculator_cgpa_history'] = []
+    
+    # Get current state from session
+    current_trimester = session.get('calculator_current_trimester', 1)
+    current_subjects = session.get('calculator_current_subjects', [])
+    cgpa_history = session.get('calculator_cgpa_history', [])
+    
+    # Handle POST requests
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'change_trimester':
+            new_trimester = request.form.get('current_trimester')
+            if new_trimester and new_trimester.isdigit():
+                new_trimester = int(new_trimester)
+                if new_trimester != current_trimester:
+                    session['calculator_current_trimester'] = new_trimester
+                    session['calculator_current_subjects'] = []
+                    return redirect('/trackademic/calculator')
+        
+        elif action == 'add_subject':
+            subject_id = request.form.get('subject_to_add')
+            if subject_id:
+                subject_id = int(subject_id)
+                # Get all subjects from database
+                conn = get_db_connection()
+                subject_data = conn.execute('''
+                    SELECT subject_id as id, 
+                           subject_name as name, 
+                           subject_code as code, 
+                           credit_hours as credits 
+                    FROM subjects 
+                    WHERE subject_id = ?
+                ''', (subject_id,)).fetchone()
+                conn.close()
+                
+                if subject_data:
+                    # Check if subject already exists in current trimester
+                    existing_ids = [s['id'] for s in current_subjects]
+                    if subject_id not in existing_ids:
+                        subject_with_grade = {
+                            'id': subject_data['id'],
+                            'name': subject_data['name'],
+                            'code': subject_data['code'],
+                            'credits': subject_data['credits'],
+                            'grade': '',
+                            'trimester': current_trimester
+                        }
+                        current_subjects.append(subject_with_grade)
+                        session['calculator_current_subjects'] = current_subjects
+        
+        elif action.startswith('remove_subject_'):
+            try:
+                subject_id = int(action.split('_')[-1])
+                current_subjects = [s for s in current_subjects if s['id'] != subject_id]
+                session['calculator_current_subjects'] = current_subjects
+            except (IndexError, ValueError):
+                pass
+        
+        elif action.startswith('update_grade_'):
+            try:
+                subject_id = int(action.split('_')[-1])
+                grade = request.form.get(f'grade_{subject_id}', '')
+                
+                # Update the grade in current_subjects
+                for subject in current_subjects:
+                    if subject['id'] == subject_id:
+                        subject['grade'] = grade
+                        break
+                session['calculator_current_subjects'] = current_subjects
+            except (IndexError, ValueError):
+                pass
+        
+        elif action == 'save_trimester':
+            # Calculate current GPA
+            current_gpa_data = calculate_gpa_server(current_subjects)
+            
+            # Check if all subjects have grades
+            if current_gpa_data['subjects_without_grades'] == 0 and current_subjects:
+                # Prepare semester data
+                semester_data = {
+                    'semester': f'Trimester {current_trimester}',
+                    'trimester_number': current_trimester,
+                    'date': datetime.datetime.now().strftime('%Y-%m-%d'),
+                    'total_credits': current_gpa_data['total_credits'],
+                    'total_grade_points': current_gpa_data['total_grade_points'],
+                    'gpa': current_gpa_data['gpa'],
+                    'subjects': current_subjects.copy()
+                }
+                
+                # Check if this trimester already exists in history
+                existing_index = next((i for i, s in enumerate(cgpa_history) 
+                                      if s['trimester_number'] == current_trimester), -1)
+                
+                if existing_index != -1:
+                    cgpa_history[existing_index] = semester_data
+                else:
+                    cgpa_history.append(semester_data)
+                
+                # Sort by trimester number
+                cgpa_history.sort(key=lambda x: x['trimester_number'])
+                session['calculator_cgpa_history'] = cgpa_history
+                
+                # Also save to database
+                conn = get_db_connection()
+                try:
+                    conn.execute(
+                        'INSERT OR REPLACE INTO gpa (trimester, gpa) VALUES (?, ?)',
+                        (f'Trimester {current_trimester}', current_gpa_data['gpa'])
+                    )
+                    conn.commit()
+                except Exception as e:
+                    print(f"Error saving GPA to database: {e}")
+                finally:
+                    conn.close()
+                
+                # Reset current trimester and advance to next
+                session['calculator_current_subjects'] = []
+                if current_trimester < 6:
+                    session['calculator_current_trimester'] = current_trimester + 1
+                
+                flash(f'Trimester {current_trimester} saved successfully! GPA: {current_gpa_data["gpa"]:.2f}', 'success')
+                return redirect('/trackademic/calculator')
+            else:
+                flash('Please select grades for all subjects before saving.', 'error')
+        
+        elif action == 'reset_trimester':
+            session['calculator_current_subjects'] = []
+        
+        elif action == 'clear_history':
+            session['calculator_cgpa_history'] = []
+            flash('All CGPA history has been cleared.', 'success')
+        
+        elif action.startswith('remove_history_'):
+            try:
+                trimester_number = int(action.split('_')[-1])
+                cgpa_history = [s for s in cgpa_history if s['trimester_number'] != trimester_number]
+                session['calculator_cgpa_history'] = cgpa_history
+                flash(f'Trimester {trimester_number} removed from history.', 'success')
+            except (IndexError, ValueError):
+                pass
+        
+        # Refresh current values after POST
+        current_trimester = session.get('calculator_current_trimester', 1)
+        current_subjects = session.get('calculator_current_subjects', [])
+        cgpa_history = session.get('calculator_cgpa_history', [])
+    
+    # Get all subjects from database for the dropdown
+    conn = get_db_connection()
+    all_subjects = conn.execute('''
+        SELECT subject_id as id, 
+               subject_name as name, 
+               subject_code as code, 
+               credit_hours as credits 
+        FROM subjects 
+        ORDER BY subject_code
+    ''').fetchall()
+    conn.close()
+    
+    # Calculate current GPA
+    current_gpa_data = calculate_gpa_server(current_subjects)
+    
+    # Calculate overall CGPA
+    overall_cgpa = calculate_cgpa_server(cgpa_history)
+    
+    # Render the calculator template with all data
+    return render_template('Calculator.html',
+                         all_subjects=all_subjects,
+                         current_trimester=current_trimester,
+                         current_subjects=current_subjects,
+                         grade_scale=GRADE_SCALE,
+                         current_gpa_data=current_gpa_data,
+                         cgpa_history=cgpa_history,
+                         overall_cgpa=overall_cgpa,
+                         app_mode='trackademic')
 
 # ============ TRACKADEMIC GPA ROUTES ============
 @app.route('/trackademic/gpa')
@@ -1126,13 +1440,18 @@ def create_user_database_route():
 @app.route('/trackademic/timetable')
 def timetable():
     """View timetable in non-edit mode"""
+    if 'user_id' not in session:
+        return redirect('/login')
+    
+    user_id = session['user_id']
     conn = get_db_connection()
     timetable_data = conn.execute('''
         SELECT t.*, s.subject_name, s.subject_code, t.task_description
         FROM timetable t 
         JOIN subjects s ON t.subject_id = s.subject_id
+        WHERE t.user_id = ?
         ORDER BY t.day, t.time_slot
-    ''').fetchall()
+    ''', (user_id,)).fetchall()
     
     schedule = {}
     for item in timetable_data:
@@ -1144,14 +1463,16 @@ def timetable():
             'subject_name': item['subject_name'],
             'subject_code': item['subject_code'],
             'time_slot': time_slot,
-            'task_description': item['task_description']
+            'task_description': item['task_description'],
+            'subject_id': item['subject_id'],
+            'timetable_id': item['timetable_id']
         }
     
     # Get today's schedule
-    today_schedule = get_today_schedule()
+    today_schedule = get_today_schedule(user_id)
     
     # Get weekly summary
-    weekly_summary = get_weekly_summary()
+    weekly_summary = get_weekly_summary(user_id)
     
     conn.close()
     
@@ -1159,54 +1480,11 @@ def timetable():
                           today_schedule=today_schedule, weekly_summary=weekly_summary,
                           app_mode='trackademic')
 
-@app.route('/trackademic/edit_timetable')
-def edit_timetable():
-    """Enter edit mode"""
-    # Check if user is admin
-    if 'is_admin' not in session or session['is_admin'] != 1:
-        return redirect('/trackademic/timetable')
-    
-    conn = get_db_connection()
-    subjects = conn.execute('SELECT * FROM subjects ORDER BY subject_id').fetchall()
-    
-    timetable_data = conn.execute('''
-        SELECT t.*, s.subject_name, s.subject_code, t.task_description
-        FROM timetable t 
-        JOIN subjects s ON t.subject_id = s.subject_id
-        ORDER BY t.day, t.time_slot
-    ''').fetchall()
-    
-    schedule = {}
-    for item in timetable_data:
-        day = item['day']
-        time_slot = item['time_slot']
-        if day not in schedule:
-            schedule[day] = {}
-        schedule[day][time_slot] = {
-            'subject_name': item['subject_name'],
-            'subject_code': item['subject_code'],
-            'time_slot': time_slot,
-            'task_description': item['task_description']
-        }
-    
-    # Get today's schedule
-    today_schedule = get_today_schedule()
-    
-    # Get weekly summary
-    weekly_summary = get_weekly_summary()
-    
-    conn.close()
-
-    return render_template('timetable.html', subjects=subjects, schedule=schedule, 
-                          edit_mode=True, today_schedule=today_schedule, 
-                          weekly_summary=weekly_summary, app_mode='trackademic')
-
 @app.route('/trackademic/add_subject_form')
 def add_subject_form():
-    """Show form to add a subject to timetable"""
-    # Check if user is admin
-    if 'is_admin' not in session or session['is_admin'] != 1:
-        return redirect('/trackademic/timetable')
+    """Show form to add a subject to timetable - accessible to all users"""
+    if 'user_id' not in session:
+        return redirect('/login')
     
     day = int(request.args.get('day', 0))
     
@@ -1227,10 +1505,10 @@ def add_subject_form():
 @app.route('/trackademic/add_timetable', methods=['POST'])
 def add_timetable():
     """Add a subject to the timetable database"""
-    # Check if user is admin
-    if 'is_admin' not in session or session['is_admin'] != 1:
-        return redirect('/trackademic/timetable')
+    if 'user_id' not in session:  # Only check if user is logged in
+        return redirect('/login')
     
+    user_id = session['user_id']
     day = int(request.form.get('day', 0))
     start_time = request.form.get('start_time', '').strip()
     end_time = request.form.get('end_time', '').strip()
@@ -1363,9 +1641,9 @@ def add_timetable():
         
         # Insert into timetable WITH task_description
         conn.execute(
-            'INSERT INTO timetable (subject_id, day, time_slot, task_description) VALUES (?, ?, ?, ?)',
-            (subject_id, day, time_slot, task_description)  # Add task_description here
-        )
+            'INSERT INTO timetable (subject_id, user_id, day, time_slot, task_description) VALUES (?, ?, ?, ?, ?)',
+            (subject_id, user_id, day, time_slot, task_description)
+    )
         conn.commit()
         conn.close()
         
@@ -1387,6 +1665,51 @@ def add_timetable():
                               custom_task=custom_task,
                               task_description=task_description,
                               app_mode='trackademic')
+    
+@app.route('/trackademic/edit_timetable')
+def edit_timetable():
+    """Enter edit mode - accessible to all logged-in users"""
+    if 'user_id' not in session:
+        return redirect('/login')
+    
+    user_id = session['user_id']
+    conn = get_db_connection()
+    subjects = conn.execute('SELECT * FROM subjects ORDER BY subject_id').fetchall()
+    
+    timetable_data = conn.execute('''
+        SELECT t.*, s.subject_name, s.subject_code, t.task_description
+        FROM timetable t 
+        JOIN subjects s ON t.subject_id = s.subject_id
+        WHERE t.user_id = ?
+        ORDER BY t.day, t.time_slot
+    ''', (user_id,)).fetchall()
+    
+    schedule = {}
+    for item in timetable_data:
+        day = item['day']
+        time_slot = item['time_slot']
+        if day not in schedule:
+            schedule[day] = {}
+        schedule[day][time_slot] = {
+            'subject_name': item['subject_name'],
+            'subject_code': item['subject_code'],
+            'time_slot': time_slot,
+            'task_description': item['task_description'],
+            'subject_id': item['subject_id'],
+            'timetable_id': item['timetable_id']
+        }
+    
+    # Get today's schedule
+    today_schedule = get_today_schedule(user_id)
+    
+    # Get weekly summary
+    weekly_summary = get_weekly_summary(user_id)
+    
+    conn.close()
+
+    return render_template('timetable.html', subjects=subjects, schedule=schedule, 
+                          edit_mode=True, today_schedule=today_schedule, 
+                          weekly_summary=weekly_summary, app_mode='trackademic')
 
 def is_valid_time_range(start_time_str, end_time_str):
     """Helper function to validate if end time is after start time"""
@@ -1444,19 +1767,19 @@ def is_valid_time_range(start_time_str, end_time_str):
 
 @app.route('/trackademic/remove_timetable', methods=['POST'])
 def remove_timetable():
-    """Remove a subject from timetable database"""
-    # Check if user is admin
-    if 'is_admin' not in session or session['is_admin'] != 1:
+    """Remove a subject from timetable database - user can only remove their own"""
+    if 'user_id' not in session:
         return redirect('/trackademic/timetable')
     
+    user_id = session['user_id']
     day = int(request.form.get('day', 0))
     time = request.form.get('time', '')
     
     try:
         conn = get_db_connection()
         conn.execute(
-            'DELETE FROM timetable WHERE day = ? AND time_slot = ?',
-            (day, time)
+            'DELETE FROM timetable WHERE user_id = ? AND day = ? AND time_slot = ?',
+            (user_id, day, time)
         )
         conn.commit()
         conn.close()
@@ -1468,14 +1791,14 @@ def remove_timetable():
 
 @app.route('/trackademic/clear_timetable', methods=['POST'])
 def clear_timetable():
-    """Clear all timetable data"""
-    # Check if user is admin
-    if 'is_admin' not in session or session['is_admin'] != 1:
+    """Clear all timetable data for the current user"""
+    if 'user_id' not in session:
         return redirect('/trackademic/timetable')
     
+    user_id = session['user_id']
     try:
         conn = get_db_connection()
-        conn.execute('DELETE FROM timetable')
+        conn.execute('DELETE FROM timetable WHERE user_id = ?', (user_id,))
         conn.commit()
         conn.close()
         
@@ -1483,10 +1806,14 @@ def clear_timetable():
     
     except Exception as e:
         return f'<h1>Error clearing timetable: {str(e)}</h1><p><a href="/trackademic/edit_timetable">Go back</a></p>'
-
+    
 @app.route('/trackademic/complete_task', methods=['POST'])
 def complete_task():
     """Mark a task as completed and remove it from timetable"""
+    if 'user_id' not in session:
+        return redirect('/login')
+    
+    user_id = session['user_id']
     try:
         day = int(request.form.get('day', 0))
         time_slot = request.form.get('time_slot', '')
@@ -1495,22 +1822,32 @@ def complete_task():
         conn = get_db_connection()
         
         # First, check if this is a custom task (subject_code starts with CUSTOM_)
-        subject = conn.execute(
-            'SELECT subject_code FROM subjects WHERE subject_id = ?',
-            (subject_id,)
-        ).fetchone()
+        # AND belongs to the current user
+        subject = conn.execute('''
+            SELECT s.subject_code 
+            FROM subjects s 
+            JOIN timetable t ON s.subject_id = t.subject_id
+            WHERE s.subject_id = ? AND t.user_id = ?
+        ''', (subject_id, user_id)).fetchone()
         
         if subject and subject['subject_code'].startswith('CUSTOM_'):
             # Delete the custom subject from subjects table
-            conn.execute(
-                'DELETE FROM subjects WHERE subject_id = ?',
-                (subject_id,)
-            )
+            # Only if no other user is using it
+            other_users = conn.execute(
+                'SELECT COUNT(*) FROM timetable WHERE subject_id = ? AND user_id != ?',
+                (subject_id, user_id)
+            ).fetchone()[0]
+            
+            if other_users == 0:
+                conn.execute(
+                    'DELETE FROM subjects WHERE subject_id = ?',
+                    (subject_id,)
+                )
         
-        # Delete from timetable
+        # Delete from timetable - only user's own entry
         conn.execute(
-            'DELETE FROM timetable WHERE day = ? AND time_slot = ?',
-            (day, time_slot)
+            'DELETE FROM timetable WHERE user_id = ? AND day = ? AND time_slot = ?',
+            (user_id, day, time_slot)
         )
         
         conn.commit()
@@ -1522,24 +1859,24 @@ def complete_task():
         return f'<h1>Error completing task: {str(e)}</h1><p><a href="/trackademic/timetable">Go back</a></p>'
 
 # ============ HELPER FUNCTIONS FOR TRACKADEMIC ============
-def get_today_schedule():
-    """Get today's schedule based on current day of week"""
+def get_today_schedule(user_id):
+    """Get today's schedule based on current day of week for specific user"""
     today = datetime.datetime.today().weekday()
     
     conn = get_db_connection()
     today_schedule = conn.execute('''
-        SELECT t.time_slot, s.subject_name, s.subject_code, t.task_description
+        SELECT t.time_slot, s.subject_name, s.subject_code, t.task_description, s.subject_id
         FROM timetable t 
         JOIN subjects s ON t.subject_id = s.subject_id
-        WHERE t.day = ?
+        WHERE t.user_id = ? AND t.day = ?
         ORDER BY t.time_slot
-    ''', (today,)).fetchall()
+    ''', (user_id, today)).fetchall()
     
     conn.close()
     return today_schedule
 
-def get_weekly_summary():
-    """Get summary of all scheduled tasks for the week"""
+def get_weekly_summary(user_id):
+    """Get summary of all scheduled tasks for the week for specific user"""
     conn = get_db_connection()
     
     weekly_summary = conn.execute('''
@@ -1553,9 +1890,10 @@ def get_weekly_summary():
             COUNT(*) as task_count
         FROM timetable t 
         JOIN subjects s ON t.subject_id = s.subject_id
+        WHERE t.user_id = ?
         GROUP BY t.day, s.subject_name, t.time_slot
         ORDER BY t.day, t.time_slot
-    ''').fetchall()
+    ''', (user_id,)).fetchall()
     
     conn.close()
     return weekly_summary
