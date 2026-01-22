@@ -1,0 +1,112 @@
+body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(165deg, #6f4dbd, #000000);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.container {
+    width: 900px;
+    display: flex;
+    border: 0.05px solid white;
+    border-radius: 30px;
+    overflow: hidden;
+    box-shadow: 0 30px 50px rgba(0, 0, 0, 0.87);
+}
+
+.side-image {
+    width: 47%;
+    background: url(https://cdn.prod.website-files.com/6448bf6f064020ce1b2ca19d/65574e135bc9d86536302abe_intelligent-automation123456765432-min.jpg);
+    background-size: cover;
+}
+
+.form-box {
+    width: 53%;
+    padding: 40px;
+}
+
+.form-box h2 {
+    font-size: 26px;
+    color: #ffffff;
+}
+
+.form-box p {
+    margin-top: 40px;
+    color: #ffffff;
+}
+
+a {
+    color: #6eeaf3;
+    text-decoration: none;
+}
+
+.glass {
+    background: rgba(40, 38, 52, 0.45);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-left: none;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+}
+
+.row {
+    display: flex;
+    gap: 10px;
+}
+
+input {
+    background: #2d2a3a;
+    border: 1px solid #aaaaaa;
+    border-radius: 15px;
+    padding: 14px;
+    margin-bottom: 15px;
+    color: white;
+}
+
+input:focus {
+    outline: none;
+    border-color: #a479ff;
+}
+
+.checkbox {
+    font-size: 14px;
+    margin-bottom: 20px;
+    color: #d8d4e6;
+}
+
+.checkbox input {
+    width: auto;
+    margin-right: 5px;
+}
+
+.button {
+    background: #a479ff;
+    border: none;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 16px;
+    color: #ffffff;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.button:hover {
+    background: #8f5eff;
+}
+
+.login-image {
+    background: url(https://datafloq.com/wp-content/uploads/2022/05/RPA-to-IA-1024x576-1.jpeg);
+    background-position: center;
+}
+
+.error-box {
+    color: #ff0000;
+    font-size: 13px;
+    text-align: center;
+    padding: 10px 10px;
+}
