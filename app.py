@@ -13,7 +13,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 def get_db_connection(database='trackademic.db'):
     """Get database connection for trackademic database"""
     try:
-        conn = sqlite3.connect(database)
+        conn = sqlite3.connect(database, timeout=10)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
         return conn
@@ -47,11 +47,13 @@ def init_databases():
     CREATE TABLE IF NOT EXISTS timetable (
         timetable_id INTEGER PRIMARY KEY AUTOINCREMENT,
         subject_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
         day INTEGER NOT NULL,
         time_slot TEXT NOT NULL,
         task_description TEXT DEFAULT '',
         FOREIGN KEY (subject_id) REFERENCES subjects(subject_id),
-        UNIQUE(day, time_slot)
+        FOREIGN KEY (user_id) REFERENCES trackademic_users(user_id),
+        UNIQUE(user_id, day, time_slot)
     )
     ''')
     
@@ -83,6 +85,103 @@ def init_databases():
         FOREIGN KEY (subject_id) REFERENCES subjects(subject_id)
     )
     ''')
+    
+    conn.commit()
+    conn.close()
+    
+    # Initialize Social Database
+    db = get_social_db_connection()
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT,
+            email TEXT UNIQUE,
+            password TEXT,
+            is_admin INTEGER DEFAULT 0
+        )
+    """)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS posts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            content TEXT,
+            filename TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+    """)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            post_id INTEGER,
+            user_id INTEGER,
+            username TEXT,
+            comment TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(post_id) REFERENCES posts(id)
+        )
+    """)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS folders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            folder_name TEXT,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+    """)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS saved_posts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            post_id INTEGER,
+            folder_id INTEGER,
+            FOREIGN KEY(user_id) REFERENCES users(id),
+            FOREIGN KEY(post_id) REFERENCES posts(id),
+            FOREIGN KEY(folder_id) REFERENCES folders(id)
+        )
+    """)
+    db.commit()
+    db.close()
+    
+    # Check if admin exists, if not create one
+    create_admin_user()
+
+    conn = get_db_connection('trackademic.db')
+    cursor = conn.cursor()
+    
+    # Check if user_id column exists
+    cursor.execute("PRAGMA table_info(timetable)")
+    columns = [column[1] for column in cursor.fetchall()]
+    
+    if 'user_id' not in columns:
+        # Create a temporary table with the new schema
+        cursor.execute('''
+            CREATE TABLE timetable_new (
+                timetable_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                subject_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                day INTEGER NOT NULL,
+                time_slot TEXT NOT NULL,
+                task_description TEXT DEFAULT '',
+                FOREIGN KEY (subject_id) REFERENCES subjects(subject_id),
+                FOREIGN KEY (user_id) REFERENCES trackademic_users(user_id),
+                UNIQUE(user_id, day, time_slot)
+            )
+        ''')
+        
+        # Copy existing data with default user_id (admin user)
+        cursor.execute("SELECT user_id FROM trackademic_users WHERE email='admin@login.com'")
+        admin_id = cursor.fetchone()
+        if admin_id:
+            admin_id = admin_id[0]
+            cursor.execute('''
+                INSERT INTO timetable_new (subject_id, user_id, day, time_slot, task_description)
+                SELECT subject_id, ?, day, time_slot, task_description FROM timetable
+            ''', (admin_id,))
+        
+        # Drop old table and rename new one
+        cursor.execute('DROP TABLE timetable')
+        cursor.execute('ALTER TABLE timetable_new RENAME TO timetable')
     
     conn.commit()
     conn.close()
@@ -457,48 +556,62 @@ def signup():
         username = request.form['username']
         email = request.form['email']
         password = request.form['password']
-        app_choice = request.form.get('app_choice', 'trackademic')
+        confirm_password = request.form.get('confirm_password', '')
+        
+        # Add password confirmation check
+        if password != confirm_password:
+            return render_template('signup.html', error="Passwords do not match.")
         
         # Prevent using admin email
         if email == 'admin@login.com':
             return render_template('signup.html', error="This email is reserved for admin.")
         
+        trackademic_conn = None
+        social_db = None
+        
         try:
-            # Create user in both databases
-            conn = get_db_connection()
-            conn.execute(
+            # Create user in trackademic database
+            trackademic_conn = get_db_connection()  # trackademic.db
+            trackademic_conn.execute(
                 "INSERT INTO trackademic_users (username, email, password, is_admin) VALUES (?, ?, ?, 0)",
                 (username, email, password)
             )
-            conn.commit()
-            conn.close()
+            trackademic_conn.commit()
             
-            db = get_social_db_connection()
-            db.execute(
+            # Create user in social database
+            social_db = get_social_db_connection()  # social.db
+            social_db.execute(
                 "INSERT INTO users (username, email, password, is_admin) VALUES (?, ?, ?, 0)",
                 (username, email, password)
             )
-            db.commit()
-            db.close()
+            social_db.commit()
             
             # Get user ID from social DB
-            db = get_social_db_connection()
-            cursor = db.execute("SELECT * FROM users WHERE email=?", (email,))
+            cursor = social_db.execute("SELECT * FROM users WHERE email=?", (email,))
             user = cursor.fetchone()
-            db.close()
+            
+            if not user:
+                return render_template('signup.html', error="Error creating account. Please try again.")
             
             session['user_id'] = user['id']
             session['username'] = username
-            session['app_mode'] = app_choice
+            session['app_mode'] = 'trackademic'  # Default to trackademic
             session['is_admin'] = 0  # Regular user
             
-            if app_choice == 'social':
-                return redirect('/social/dashboard')
-            else:
-                return redirect('/trackademic')
+            # Redirect to trackademic by default
+            return redirect('/trackademic')
                 
         except sqlite3.IntegrityError:
             return render_template('signup.html', error="Email already exists.")
+        except Exception as e:
+            print(f"Signup error: {e}")
+            return render_template('signup.html', error=f"Error creating account: {str(e)}")
+        finally:
+            # Ensure connections are closed
+            if trackademic_conn:
+                trackademic_conn.close()
+            if social_db:
+                social_db.close()
     
     return render_template('signup.html')
 
@@ -719,7 +832,7 @@ def list_subjects():
         conn.close()
         
         if not subjects:
-            return '<h1>No subjects found.</h1><p><a href="/trackademic/reset-subjects">Reset subjects database</a></p>'
+            return '<h1>No subjects found.</h1><p><a href="/trackademic/create-subjects-db">Reset subjects database</a></p>'
         
         html = '<h1>All Subjects</h1>'
         html += '<p><a href="/trackademic/add-subject-form-db">+ Add New Subject</a></p>'
@@ -1384,13 +1497,18 @@ def create_user_database_route():
 @app.route('/trackademic/timetable')
 def timetable():
     """View timetable in non-edit mode"""
+    if 'user_id' not in session:
+        return redirect('/login')
+    
+    user_id = session['user_id']
     conn = get_db_connection()
     timetable_data = conn.execute('''
         SELECT t.*, s.subject_name, s.subject_code, t.task_description
         FROM timetable t 
         JOIN subjects s ON t.subject_id = s.subject_id
+        WHERE t.user_id = ?
         ORDER BY t.day, t.time_slot
-    ''').fetchall()
+    ''', (user_id,)).fetchall()
     
     schedule = {}
     for item in timetable_data:
@@ -1402,14 +1520,16 @@ def timetable():
             'subject_name': item['subject_name'],
             'subject_code': item['subject_code'],
             'time_slot': time_slot,
-            'task_description': item['task_description']
+            'task_description': item['task_description'],
+            'subject_id': item['subject_id'],
+            'timetable_id': item['timetable_id']
         }
     
     # Get today's schedule
-    today_schedule = get_today_schedule()
+    today_schedule = get_today_schedule(user_id)
     
     # Get weekly summary
-    weekly_summary = get_weekly_summary()
+    weekly_summary = get_weekly_summary(user_id)
     
     conn.close()
     
@@ -1417,54 +1537,11 @@ def timetable():
                           today_schedule=today_schedule, weekly_summary=weekly_summary,
                           app_mode='trackademic')
 
-@app.route('/trackademic/edit_timetable')
-def edit_timetable():
-    """Enter edit mode"""
-    # Check if user is admin
-    if 'is_admin' not in session or session['is_admin'] != 1:
-        return redirect('/trackademic/timetable')
-    
-    conn = get_db_connection()
-    subjects = conn.execute('SELECT * FROM subjects ORDER BY subject_id').fetchall()
-    
-    timetable_data = conn.execute('''
-        SELECT t.*, s.subject_name, s.subject_code, t.task_description
-        FROM timetable t 
-        JOIN subjects s ON t.subject_id = s.subject_id
-        ORDER BY t.day, t.time_slot
-    ''').fetchall()
-    
-    schedule = {}
-    for item in timetable_data:
-        day = item['day']
-        time_slot = item['time_slot']
-        if day not in schedule:
-            schedule[day] = {}
-        schedule[day][time_slot] = {
-            'subject_name': item['subject_name'],
-            'subject_code': item['subject_code'],
-            'time_slot': time_slot,
-            'task_description': item['task_description']
-        }
-    
-    # Get today's schedule
-    today_schedule = get_today_schedule()
-    
-    # Get weekly summary
-    weekly_summary = get_weekly_summary()
-    
-    conn.close()
-
-    return render_template('timetable.html', subjects=subjects, schedule=schedule, 
-                          edit_mode=True, today_schedule=today_schedule, 
-                          weekly_summary=weekly_summary, app_mode='trackademic')
-
 @app.route('/trackademic/add_subject_form')
 def add_subject_form():
-    """Show form to add a subject to timetable"""
-    # Check if user is admin
-    if 'is_admin' not in session or session['is_admin'] != 1:
-        return redirect('/trackademic/timetable')
+    """Show form to add a subject to timetable - accessible to all users"""
+    if 'user_id' not in session:
+        return redirect('/login')
     
     day = int(request.args.get('day', 0))
     
@@ -1485,10 +1562,10 @@ def add_subject_form():
 @app.route('/trackademic/add_timetable', methods=['POST'])
 def add_timetable():
     """Add a subject to the timetable database"""
-    # Check if user is admin
-    if 'is_admin' not in session or session['is_admin'] != 1:
-        return redirect('/trackademic/timetable')
+    if 'user_id' not in session:  # Only check if user is logged in
+        return redirect('/login')
     
+    user_id = session['user_id']
     day = int(request.form.get('day', 0))
     start_time = request.form.get('start_time', '').strip()
     end_time = request.form.get('end_time', '').strip()
@@ -1621,9 +1698,9 @@ def add_timetable():
         
         # Insert into timetable WITH task_description
         conn.execute(
-            'INSERT INTO timetable (subject_id, day, time_slot, task_description) VALUES (?, ?, ?, ?)',
-            (subject_id, day, time_slot, task_description)  # Add task_description here
-        )
+            'INSERT INTO timetable (subject_id, user_id, day, time_slot, task_description) VALUES (?, ?, ?, ?, ?)',
+            (subject_id, user_id, day, time_slot, task_description)
+    )
         conn.commit()
         conn.close()
         
@@ -1645,6 +1722,51 @@ def add_timetable():
                               custom_task=custom_task,
                               task_description=task_description,
                               app_mode='trackademic')
+    
+@app.route('/trackademic/edit_timetable')
+def edit_timetable():
+    """Enter edit mode - accessible to all logged-in users"""
+    if 'user_id' not in session:
+        return redirect('/login')
+    
+    user_id = session['user_id']
+    conn = get_db_connection()
+    subjects = conn.execute('SELECT * FROM subjects ORDER BY subject_id').fetchall()
+    
+    timetable_data = conn.execute('''
+        SELECT t.*, s.subject_name, s.subject_code, t.task_description
+        FROM timetable t 
+        JOIN subjects s ON t.subject_id = s.subject_id
+        WHERE t.user_id = ?
+        ORDER BY t.day, t.time_slot
+    ''', (user_id,)).fetchall()
+    
+    schedule = {}
+    for item in timetable_data:
+        day = item['day']
+        time_slot = item['time_slot']
+        if day not in schedule:
+            schedule[day] = {}
+        schedule[day][time_slot] = {
+            'subject_name': item['subject_name'],
+            'subject_code': item['subject_code'],
+            'time_slot': time_slot,
+            'task_description': item['task_description'],
+            'subject_id': item['subject_id'],
+            'timetable_id': item['timetable_id']
+        }
+    
+    # Get today's schedule
+    today_schedule = get_today_schedule(user_id)
+    
+    # Get weekly summary
+    weekly_summary = get_weekly_summary(user_id)
+    
+    conn.close()
+
+    return render_template('timetable.html', subjects=subjects, schedule=schedule, 
+                          edit_mode=True, today_schedule=today_schedule, 
+                          weekly_summary=weekly_summary, app_mode='trackademic')
 
 def is_valid_time_range(start_time_str, end_time_str):
     """Helper function to validate if end time is after start time"""
@@ -1702,19 +1824,19 @@ def is_valid_time_range(start_time_str, end_time_str):
 
 @app.route('/trackademic/remove_timetable', methods=['POST'])
 def remove_timetable():
-    """Remove a subject from timetable database"""
-    # Check if user is admin
-    if 'is_admin' not in session or session['is_admin'] != 1:
+    """Remove a subject from timetable database - user can only remove their own"""
+    if 'user_id' not in session:
         return redirect('/trackademic/timetable')
     
+    user_id = session['user_id']
     day = int(request.form.get('day', 0))
     time = request.form.get('time', '')
     
     try:
         conn = get_db_connection()
         conn.execute(
-            'DELETE FROM timetable WHERE day = ? AND time_slot = ?',
-            (day, time)
+            'DELETE FROM timetable WHERE user_id = ? AND day = ? AND time_slot = ?',
+            (user_id, day, time)
         )
         conn.commit()
         conn.close()
@@ -1726,14 +1848,14 @@ def remove_timetable():
 
 @app.route('/trackademic/clear_timetable', methods=['POST'])
 def clear_timetable():
-    """Clear all timetable data"""
-    # Check if user is admin
-    if 'is_admin' not in session or session['is_admin'] != 1:
+    """Clear all timetable data for the current user"""
+    if 'user_id' not in session:
         return redirect('/trackademic/timetable')
     
+    user_id = session['user_id']
     try:
         conn = get_db_connection()
-        conn.execute('DELETE FROM timetable')
+        conn.execute('DELETE FROM timetable WHERE user_id = ?', (user_id,))
         conn.commit()
         conn.close()
         
@@ -1741,10 +1863,14 @@ def clear_timetable():
     
     except Exception as e:
         return f'<h1>Error clearing timetable: {str(e)}</h1><p><a href="/trackademic/edit_timetable">Go back</a></p>'
-
+    
 @app.route('/trackademic/complete_task', methods=['POST'])
 def complete_task():
     """Mark a task as completed and remove it from timetable"""
+    if 'user_id' not in session:
+        return redirect('/login')
+    
+    user_id = session['user_id']
     try:
         day = int(request.form.get('day', 0))
         time_slot = request.form.get('time_slot', '')
@@ -1753,32 +1879,271 @@ def complete_task():
         conn = get_db_connection()
         
         # First, check if this is a custom task (subject_code starts with CUSTOM_)
-        subject = conn.execute(
-            'SELECT subject_code FROM subjects WHERE subject_id = ?',
-            (subject_id,)
-        ).fetchone()
+        # AND belongs to the current user
+        subject = conn.execute('''
+            SELECT s.subject_code 
+            FROM subjects s 
+            JOIN timetable t ON s.subject_id = t.subject_id
+            WHERE s.subject_id = ? AND t.user_id = ?
+        ''', (subject_id, user_id)).fetchone()
         
         if subject and subject['subject_code'].startswith('CUSTOM_'):
             # Delete the custom subject from subjects table
-            conn.execute(
-                'DELETE FROM subjects WHERE subject_id = ?',
-                (subject_id,)
-            )
+            # Only if no other user is using it
+            other_users = conn.execute(
+                'SELECT COUNT(*) FROM timetable WHERE subject_id = ? AND user_id != ?',
+                (subject_id, user_id)
+            ).fetchone()[0]
+            
+            if other_users == 0:
+                conn.execute(
+                    'DELETE FROM subjects WHERE subject_id = ?',
+                    (subject_id,)
+                )
         
-        # Delete from timetable
+        # Delete from timetable - only user's own entry
         conn.execute(
-            'DELETE FROM timetable WHERE day = ? AND time_slot = ?',
-            (day, time_slot)
+            'DELETE FROM timetable WHERE user_id = ? AND day = ? AND time_slot = ?',
+            (user_id, day, time_slot)
         )
         
         conn.commit()
         conn.close()
         
-
-        return redirect('/timetable')
+        return redirect('/trackademic/timetable')
     
     except Exception as e:
-        return f'<h1>Error completing task: {str(e)}</h1><p><a href="/timetable">Go back</a></p>'
+        return f'<h1>Error completing task: {str(e)}</h1><p><a href="/trackademic/timetable">Go back</a></p>'
+
+# ============ HELPER FUNCTIONS FOR TRACKADEMIC ============
+def get_today_schedule(user_id):
+    """Get today's schedule based on current day of week for specific user"""
+    today = datetime.datetime.today().weekday()
+    
+    conn = get_db_connection()
+    today_schedule = conn.execute('''
+        SELECT t.time_slot, s.subject_name, s.subject_code, t.task_description, s.subject_id
+        FROM timetable t 
+        JOIN subjects s ON t.subject_id = s.subject_id
+        WHERE t.user_id = ? AND t.day = ?
+        ORDER BY t.time_slot
+    ''', (user_id, today)).fetchall()
+    
+    conn.close()
+    return today_schedule
+
+def get_weekly_summary(user_id):
+    """Get summary of all scheduled tasks for the week for specific user"""
+    conn = get_db_connection()
+    
+    weekly_summary = conn.execute('''
+        SELECT 
+            t.day,
+            t.time_slot,
+            s.subject_name,
+            s.subject_code,
+            s.subject_id,
+            t.task_description,
+            COUNT(*) as task_count
+        FROM timetable t 
+        JOIN subjects s ON t.subject_id = s.subject_id
+        WHERE t.user_id = ?
+        GROUP BY t.day, s.subject_name, t.time_slot
+        ORDER BY t.day, t.time_slot
+    ''', (user_id,)).fetchall()
+    
+    conn.close()
+    return weekly_summary
+
+# ============ SOCIAL APP ROUTES ============
+@app.route('/social/dashboard', methods=['GET', 'POST'])
+def social_dashboard():
+    """Social platform dashboard"""
+    if "user_id" not in session:
+        return redirect("/login")
+    
+    session['app_mode'] = 'social'
+    
+    user_id = session["user_id"]
+    username = session["username"]
+    search_query = request.args.get('search', '')
+
+    if request.method == "POST":
+        content = request.form.get("content")
+        file = request.files.get("file")
+        filename = None
+        if file and file.filename:
+            filename = file.filename
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        db = get_social_db_connection()
+        db.execute("INSERT INTO posts (user_id, content, filename) VALUES (?, ?, ?)", (user_id, content, filename))
+        db.commit()
+        db.close()
+        return redirect("/social/dashboard")
+
+    db = get_social_db_connection()
+    
+    # Get folders
+    cursor = db.execute("""
+        SELECT DISTINCT folders.id, folders.folder_name 
+        FROM folders 
+        JOIN saved_posts ON folders.id = saved_posts.folder_id 
+        WHERE folders.user_id=?
+    """, (user_id,))
+    folders = cursor.fetchall()
+
+    # Get posts
+    query = """
+        SELECT 
+            posts.id, posts.content, posts.filename, users.username, posts.user_id,
+            EXISTS(SELECT 1 FROM saved_posts WHERE post_id = posts.id AND user_id = ?) as is_saved
+        FROM posts 
+        JOIN users ON posts.user_id = users.id
+    """
+    params = [user_id]
+    if search_query:
+        query += " WHERE posts.content LIKE ? OR users.username LIKE ?"
+        params.append(f'%{search_query}%')
+        params.append(f'%{search_query}%')
+
+    query += " ORDER BY posts.id DESC"
+    cursor = db.execute(query, params)
+    posts = cursor.fetchall()
+    
+    # Get comments for each post
+    posts_with_comments = []
+    for post in posts:
+        cursor = db.execute(
+            "SELECT id, username, comment, user_id FROM comments WHERE post_id=? ORDER BY created_at ASC",
+            (post[0],)
+        )
+        comments = cursor.fetchall()
+        posts_with_comments.append((*post, comments))
+
+    db.close()
+    
+    return render_template("dashboard.html", 
+                         username=username, 
+                         posts=posts_with_comments, 
+                         folders=folders, 
+                         search_query=search_query,
+                         app_mode='social')
+
+@app.route("/social/save_post/<int:post_id>", methods=["POST"])
+def save_post(post_id):
+    if "user_id" not in session: return redirect("/login")
+    user_id = session["user_id"]
+    folder_id = request.form.get("folder_id")
+    new_folder_name = request.form.get("new_folder_name")
+
+    db = get_social_db_connection()
+    if new_folder_name and new_folder_name.strip():
+        cursor = db.execute("INSERT INTO folders (user_id, folder_name) VALUES (?, ?)", 
+                            (user_id, new_folder_name.strip()))
+        folder_id = cursor.lastrowid
+    
+    if folder_id:
+        db.execute("INSERT INTO saved_posts (user_id, post_id, folder_id) VALUES (?, ?, ?)", 
+                   (user_id, post_id, folder_id))
+        db.commit()
+    db.close()
+    return redirect("/social/dashboard")
+
+@app.route("/social/saved")
+def saved_posts():
+    if "user_id" not in session: return redirect("/login")
+    user_id = session["user_id"]
+    search_query = request.args.get('search', '')
+    db = get_social_db_connection()
+    query = """
+        SELECT f.folder_name, p.content, p.filename, u.username, sp.id
+        FROM saved_posts sp
+        JOIN folders f ON sp.folder_id = f.id
+        JOIN posts p ON sp.post_id = p.id
+        JOIN users u ON p.user_id = u.id
+        WHERE sp.user_id = ?
+    """
+    params = [user_id]
+    if search_query:
+        query += " AND (p.content LIKE ? OR f.folder_name LIKE ?)"
+        params.append(f'%{search_query}%')
+        params.append(f'%{search_query}%')
+
+    cursor = db.execute(query, params)
+    data = cursor.fetchall()
+    organized = {}
+    for folder, content, file, poster, sp_id in data:
+        if folder not in organized: organized[folder] = []
+        organized[folder].append({'content': content, 'file': file, 'poster': poster, 'sp_id': sp_id})
+    db.close()
+    return render_template("saved.html", organized=organized, username=session["username"], search_query=search_query, app_mode='social')
+
+@app.route("/social/unsave/<int:sp_id>", methods=["POST"])
+def unsave(sp_id):
+    if "user_id" not in session: return redirect("/login")
+    user_id = session["user_id"]
+    db = get_social_db_connection()
+    
+    # Check if folder becomes empty after deletion
+    cursor = db.execute("SELECT folder_id FROM saved_posts WHERE id=? AND user_id=?", (sp_id, user_id))
+    result = cursor.fetchone()
+    
+    if result:
+        folder_id = result[0]
+        db.execute("DELETE FROM saved_posts WHERE id=? AND user_id=?", (sp_id, user_id))
+        
+        # Check if any posts are still in this folder
+        check = db.execute("SELECT COUNT(*) FROM saved_posts WHERE folder_id=?", (folder_id,)).fetchone()
+        if check[0] == 0:
+            # Delete the folder if it's empty
+            db.execute("DELETE FROM folders WHERE id=?", (folder_id,))
+            
+    db.commit()
+    db.close()
+    return redirect("/social/saved")
+
+@app.route("/social/delete_post/<int:post_id>", methods=["POST"])
+def delete_post(post_id):
+    if "user_id" not in session: return redirect("/login")
+    user_id = session["user_id"]
+    db = get_social_db_connection()
+    cursor = db.execute("SELECT filename FROM posts WHERE id=? AND user_id=?", (post_id, user_id))
+    result = cursor.fetchone()
+    if result:
+        filename = result[0]
+        if filename:
+            path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            if os.path.exists(path): os.remove(path)
+        db.execute("DELETE FROM posts WHERE id=? AND user_id=?", (post_id, user_id))
+        db.execute("DELETE FROM comments WHERE post_id=?", (post_id,))
+        db.execute("DELETE FROM saved_posts WHERE post_id=?", (post_id,))
+    db.commit()
+    db.close()
+    return redirect("/social/dashboard")
+
+@app.route("/social/comment/<int:post_id>", methods=["POST"])
+def add_comment(post_id):
+    if "user_id" not in session: return redirect("/login")
+    comment_text = request.form.get("comment")
+    if comment_text:
+        db = get_social_db_connection()
+        db.execute("INSERT INTO comments (post_id, user_id, username, comment) VALUES (?, ?, ?, ?)",
+                   (post_id, session["user_id"], session["username"], comment_text))
+        db.commit()
+        db.close()
+    return redirect("/social/dashboard")
+
+@app.route("/social/delete_comment/<int:comment_id>", methods=["POST"])
+def delete_comment(comment_id):
+    if "user_id" not in session: return redirect("/login")
+    db = get_social_db_connection()
+    cursor = db.execute("SELECT user_id FROM comments WHERE id=?", (comment_id,))
+    result = cursor.fetchone()
+    if result and result[0] == session["user_id"]:
+        db.execute("DELETE FROM comments WHERE id=?", (comment_id,))
+        db.commit()
+    db.close()
+    return redirect("/social/dashboard")
 
 # ============ HELPER FUNCTIONS FOR TRACKADEMIC ============
 def get_today_schedule():
