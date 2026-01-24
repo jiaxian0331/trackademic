@@ -1,238 +1,4 @@
 * {
-<<<<<<< HEAD
-margin: 0;
-padding: 0;
-box-sizing: border-box;
-font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-.trackademic-body {
-background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-min-height: 100vh;
-display: flex;
-justify-content: center;
-align-items: center;
-padding: 20px;
-}
-
-.home-container {
-background: white;
-border-radius: 20px;
-box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-width: 100%;
-max-width: 1200px;
-overflow: hidden;
-}
-
-.home-header {
-background: linear-gradient(to right, #667eea, #764ba2);
-color: white;
-padding: 40px;
-text-align: center;
-}
-
-.home-header h1 {
-font-size: 2.5rem;
-margin-bottom: 10px;
-font-weight: 600;
-}
-
-.home-header p {
-font-size: 1.1rem;
-opacity: 0.9;
-}
-
-.welcome-section {
-padding: 30px 40px;
-text-align: center;
-border-bottom: 1px solid #eee;
-}
-
-.welcome-section h2 {
-color: #333;
-font-size: 1.8rem;
-margin-bottom: 10px;
-}
-
-.welcome-section p {
-color: #666;
-font-size: 1.1rem;
-line-height: 1.5;
-}
-
-.apps-grid {
-display: grid;
-grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-gap: 25px;
-padding: 40px;
-}
-
-.app-card {
-background: #f8f9fa;
-border-radius: 15px;
-padding: 25px;
-text-align: center;
-transition: all 0.3s ease;
-border: 2px solid transparent;
-text-decoration: none;
-display: block;
-color: inherit;
-height: 100%;
-}
-
-.app-card:hover {
-transform: translateY(-5px);
-box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-border-color: #667eea;
-background: white;
-}
-
-.app-icon {
-font-size: 2.5rem;
-margin-bottom: 15px;
-color: #667eea;
-}
-
-.app-card h3 {
-font-size: 1.3rem;
-color: #333;
-margin-bottom: 10px;
-}
-
-.app-card p {
-color: #666;
-font-size: 0.9rem;
-line-height: 1.4;
-}
-
-.actions-section {
-padding: 30px 40px;
-background: #f8f9fa;
-border-top: 1px solid #eee;
-display: flex;
-justify-content: center;
-gap: 15px;
-}
-
-.logout-btn, .app-switch-btn {
-color: white;
-border: none;
-padding: 12px 30px;
-border-radius: 50px;
-font-size: 1rem;
-font-weight: 600;
-cursor: pointer;
-transition: all 0.3s ease;
-text-decoration: none;
-display: inline-block;
-}
-
-.logout-btn {
-background: #ff4757;
-}
-
-.logout-btn:hover {
-background: #ff3742;
-transform: translateY(-2px);
-box-shadow: 0 5px 15px rgba(255, 71, 87, 0.4);
-}
-
-.app-switch-btn {
-background: #2ed573;
-}
-
-.app-switch-btn:hover {
-background: #25cc65;
-transform: translateY(-2px);
-box-shadow: 0 5px 15px rgba(46, 213, 115, 0.4);
-}
-
-/* Admin-specific styles */
-.admin-section {
-background: #f8f9fa;
-padding: 20px;
-border-radius: 15px;
-margin-bottom: 20px;
-}
-
-.admin-section h3 {
-font-size: 1.2rem;
-color: #667eea;
-margin-bottom: 15px;
-border-bottom: 2px solid #e2e8f0;
-padding-bottom: 10px;
-}
-
-.warning-card {
-background: #fff5f5 !important;
-border-color: #fc8181 !important;
-}
-
-.warning-card .app-icon {
-color: #fc8181 !important;
-}
-
-/* Media Queries */
-@media (max-width: 1024px) {
-.apps-grid {
-grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-}
-}
-
-@media (max-width: 768px) {
-.apps-grid {
-grid-template-columns: 1fr;
-padding: 20px;
-}
-
-.home-container {
-    margin: 10px;
-}
-
-.home-header {
-    padding: 30px 20px;
-}
-
-.home-header h1 {
-    font-size: 2rem;
-}
-
-.welcome-section {
-    padding: 20px;
-}
-
-.actions-section {
-    flex-direction: column;
-    gap: 10px;
-    padding: 20px;
-}
-
-.logout-btn, .app-switch-btn {
-    width: 100%;
-    text-align: center;
-}}
-
-@media (max-width: 480px) {
-.home-header h1 {
-font-size: 1.8rem;
-}
-
-.welcome-section h2 {
-    font-size: 1.5rem;
-}
-
-.app-card {
-    padding: 20px;
-}
-
-.app-icon {
-    font-size: 2rem;
-}
-
-.app-card h3 {
-    font-size: 1.2rem;
-}}
-=======
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -240,7 +6,7 @@ font-size: 1.8rem;
 }
 
 .trackademic-body {
-    background-color: #f5f7fa;
+    background: linear-gradient(135deg, #3f5871, #5c7cb4);
     min-height: 100vh;
     display: flex;
     justify-content: center;
@@ -275,30 +41,69 @@ font-size: 1.8rem;
     opacity: 0.9;
 }
 
-.welcome-section {
-    padding: 30px;
-    text-align: center;
+.header-content {
+    padding: 40px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     border-bottom: 1px solid #eaeaea;
+    flex-wrap: wrap;
+    gap: 20px;
 }
 
-.welcome-section h2 {
+.logo-title-section {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+    flex: 1;
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+}
+
+.main-logo {
+    max-width: 100%;
+    height: auto;
+    max-height: 180px;
+    width: auto;
+    object-fit: contain;
+    transition: transform 0.3s ease;
+}
+
+.main-logo:hover {
+    transform: scale(1.02);
+}
+
+.trackademic-title h2 {
+    font-size: 42px;
+    font-weight: 800;
     color: #2c3e50;
-    font-size: 22px;
-    margin-bottom: 15px;
-    font-weight: 600;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    line-height: 1;
 }
 
-.welcome-section p {
-    color: #666;
-    font-size: 16px;
-    line-height: 1.6;
+.trackademic-title .tagline {
+    font-size: 18px;
+    color: #4a6491;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+.actions-section {
+    display: flex;
+    gap: 15px;
+    flex-shrink: 0;
+    margin-left: 20px;
 }
 
 .apps-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 20px;
-    padding: 30px;
+    padding: 40px 30px;
 }
 
 .app-card {
@@ -341,19 +146,10 @@ font-size: 1.8rem;
     line-height: 1.5;
 }
 
-.actions-section {
-    padding: 30px;
-    background: #f8f9fa;
-    border-top: 1px solid #eaeaea;
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-}
-
 .logout-btn, .app-switch-btn {
     color: white;
     border: none;
-    padding: 12px 25px;
+    padding: 14px 30px;
     border-radius: 4px;
     font-size: 16px;
     font-weight: 600;
@@ -361,6 +157,7 @@ font-size: 1.8rem;
     transition: all 0.2s ease;
     text-decoration: none;
     display: inline-block;
+    white-space: nowrap;
 }
 
 .logout-btn {
@@ -369,6 +166,7 @@ font-size: 1.8rem;
 
 .logout-btn:hover {
     background: #c53030;
+    transform: translateY(-1px);
 }
 
 .app-switch-btn {
@@ -377,6 +175,7 @@ font-size: 1.8rem;
 
 .app-switch-btn:hover {
     background: #4a6491;
+    transform: translateY(-1px);
 }
 
 .admin-section {
@@ -405,10 +204,64 @@ font-size: 1.8rem;
     color: #fc8181 !important;
 }
 
+@media (max-width: 1024px) {
+    .header-content {
+        flex-direction: column;
+        text-align: center;
+        padding: 35px 25px;
+        gap: 30px;
+    }
+    
+    .logo-title-section {
+        flex-direction: column;
+        text-align: center;
+        gap: 20px;
+        width: 100%;
+    }
+    
+    .actions-section {
+        margin-left: 0;
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .trackademic-title h2 {
+        font-size: 36px;
+    }
+}
+
 @media (max-width: 768px) {
+    .header-content {
+        padding: 30px 20px;
+        gap: 25px;
+    }
+    
+    .logo-title-section {
+        gap: 15px;
+    }
+    
+    .main-logo {
+        max-height: 150px;
+    }
+    
+    .trackademic-title h2 {
+        font-size: 32px;
+    }
+    
+    .trackademic-title .tagline {
+        font-size: 16px;
+    }
+    
+    .actions-section {
+        width: 100%;
+        justify-content: center;
+        gap: 15px;
+    }
+    
     .apps-grid {
         grid-template-columns: 1fr;
-        padding: 20px;
+        padding: 30px 20px;
+        gap: 15px;
     }
     
     .home-container {
@@ -423,23 +276,116 @@ font-size: 1.8rem;
         font-size: 24px;
     }
     
+    .logout-btn, .app-switch-btn {
+        width: auto;
+        min-width: 140px;
+        text-align: center;
+        padding: 12px 25px;
+    }
+}
+
+@media (max-width: 480px) {
+    .header-content {
+        padding: 25px 15px;
+    }
+    
+    .main-logo {
+        max-height: 120px;
+    }
+    
+    .trackademic-title h2 {
+        font-size: 28px;
+    }
+    
+    .trackademic-title .tagline {
+        font-size: 14px;
+    }
+    
+    .actions-section {
+        flex-direction: column;
+        width: 100%;
+        align-items: center;
+    }
+    
+    .logout-btn, .app-switch-btn {
+        width: 100%;
+        max-width: 250px;
+    }
+    
+    .apps-grid {
+        padding: 25px 15px;
+    }
+}
+
+/* Add this to your home-styles.css file */
+
+.welcome-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 30px;
+    margin: 30px;
+    text-align: center;
+    border: 1px solid #eaeaea;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.welcome-section h2 {
+    font-size: 28px;
+    color: #2c3e50;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.welcome-section p {
+    font-size: 16px;
+    color: #666;
+    line-height: 1.6;
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+/* For admin home page */
+.admin-home .welcome-section {
+    margin: 0 30px 30px 30px;
+}
+
+.trackademic-home .actions-section {
+    display: flex;
+    justify-content: center;
+    padding: 30px 0;
+    width: 100%;
+}
+
+.trackademic-home .logout-btn {
+    margin: 0 auto;
+}
+
+@media (max-width: 768px) {
     .welcome-section {
         padding: 20px;
+        margin: 20px;
+    }
+    
+    .welcome-section h2 {
+        font-size: 24px;
+    }
+    
+    .welcome-section p {
+        font-size: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .welcome-section {
+        padding: 15px;
+        margin: 15px;
     }
     
     .welcome-section h2 {
         font-size: 20px;
     }
     
-    .actions-section {
-        flex-direction: column;
-        gap: 10px;
-        padding: 20px;
-    }
-    
-    .logout-btn, .app-switch-btn {
-        width: 100%;
-        text-align: center;
+    .welcome-section p {
+        font-size: 14px;
     }
 }
->>>>>>> zyloi

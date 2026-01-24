@@ -3,18 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <title>Trackademic - Home</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='home-styles.css') }}">
 </head>
-<body>
-    <div style="text-align: center; padding: 100px;">
-        <h1>Welcome to Trackademic</h1>
-        <p>Your academic tracking and social platform</p>
-        <div style="margin-top: 50px;">
-            <a href="/login" style="padding: 15px 30px; background: #607dff; color: white; text-decoration: none; border-radius: 5px; margin: 10px;">
-                Login
+<body class="trackademic-body">
+    <div class="home-container">
+        <div class="home-header">
+            <h1>Welcome to Trackademic</h1>
+        </div>
+        
+        <div class="header-content">
+            <div class="logo-title-section">
+                <div class="logo-container">
+                    <img src="{{ url_for('static', filename='trackademiclogo.jpg') }}" alt="Trackademic Logo" class="main-logo">
+                </div>
+                <div class="trackademic-title">
+                    <h2>TRACKADEMIC</h2>
+                    <p class="tagline">Study Planner & GPA Calculator</p>
+                </div>
+            </div>
+            
+            <div class="actions-section">
+                <a href="/login" class="app-switch-btn">Login</a>
+                <a href="/signup" class="logout-btn">Sign Up</a>
+            </div>
+        </div>
+        
+        <div class="apps-grid">
+            <a href="#" class="app-card">
+                <div class="app-icon">📊</div>
+                <h3>GPA Calculator</h3>
+                <p>Track your academic Grade Point Average (GPA)</p>
             </a>
-            <a href="/signup" style="padding: 15px 30px; background: #00b894; color: white; text-decoration: none; border-radius: 5px; margin: 10px;">
-                Sign Up
+            
+            <a href="#" class="app-card">
+                <div class="app-icon">📅</div>
+                <h3>Study Planner</h3>
+                <p>Schedule your upcoming activity</p>
+            </a>
+            
+            <a href="#" class="app-card">
+                <div class="app-icon">📊</div>
+                <h3>Study Dashboard</h3>
+                <p>Share your study notes to peers</p>
             </a>
         </div>
     </div>

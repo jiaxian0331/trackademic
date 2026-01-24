@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-body {
-    font-family: 'Inter', sans-serif;
-    background: linear-gradient(165deg, #6f4dbd, #000000);
-=======
 * {
     margin: 0;
     padding: 0;
@@ -11,24 +6,12 @@ body {
 }
 
 body {
-    background-color: #f5f7fa;
+    background: linear-gradient(135deg, #2c3e50, #4a6491);
     color: #333;
->>>>>>> zyloi
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
-<<<<<<< HEAD
-}
-
-.container {
-    width: 900px;
-    display: flex;
-    border: 0.05px solid white;
-    border-radius: 30px;
-    overflow: hidden;
-    box-shadow: 0 30px 50px rgba(0, 0, 0, 0.87);
-=======
     padding: 20px;
 }
 
@@ -40,20 +23,14 @@ body {
     border-radius: 10px;
     overflow: hidden;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
->>>>>>> zyloi
 }
 
 .side-image {
     width: 47%;
-<<<<<<< HEAD
-    background: url(https://cdn.prod.website-files.com/6448bf6f064020ce1b2ca19d/65574e135bc9d86536302abe_intelligent-automation123456765432-min.jpg);
-    background-size: cover;
-=======
     background: url("/static/images/trackademiclogo.jpg");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
->>>>>>> zyloi
 }
 
 .form-box {
@@ -62,29 +39,6 @@ body {
 }
 
 .form-box h2 {
-<<<<<<< HEAD
-    font-size: 26px;
-    color: #ffffff;
-}
-
-.form-box p {
-    margin-top: 40px;
-    color: #ffffff;
-}
-
-a {
-    color: #6eeaf3;
-    text-decoration: none;
-}
-
-.glass {
-    background: rgba(40, 38, 52, 0.45);
-    backdrop-filter: blur(14px);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-left: none;
-}
-
-=======
     font-size: 24px;
     color: #2c3e50;
     margin-bottom: 20px;
@@ -102,7 +56,6 @@ a {
     text-decoration: none;
 }
 
->>>>>>> zyloi
 form {
     display: flex;
     flex-direction: column;
@@ -114,14 +67,6 @@ form {
 }
 
 input {
-<<<<<<< HEAD
-    background: #2d2a3a;
-    border: 1px solid #aaaaaa;
-    border-radius: 15px;
-    padding: 14px;
-    margin-bottom: 15px;
-    color: white;
-=======
     background: white;
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -130,63 +75,23 @@ input {
     color: #333;
     font-size: 14px;
     width: 100%;
->>>>>>> zyloi
 }
 
 input:focus {
     outline: none;
-<<<<<<< HEAD
-    border-color: #a479ff;
-=======
     border-color: #4a6491;
->>>>>>> zyloi
 }
 
 .checkbox {
     font-size: 14px;
     margin-bottom: 20px;
-<<<<<<< HEAD
-    color: #d8d4e6;
-=======
     color: #666;
     display: flex;
     align-items: center;
->>>>>>> zyloi
 }
 
 .checkbox input {
     width: auto;
-<<<<<<< HEAD
-    margin-right: 5px;
-}
-
-.button {
-    background: #a479ff;
-    border: none;
-    padding: 14px;
-    border-radius: 10px;
-    font-size: 16px;
-    color: #ffffff;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-.button:hover {
-    background: #8f5eff;
-}
-
-.login-image {
-    background: url(https://datafloq.com/wp-content/uploads/2022/05/RPA-to-IA-1024x576-1.jpeg);
-    background-position: center;
-}
-
-.error-box {
-    color: #ff0000;
-    font-size: 13px;
-    text-align: center;
-    padding: 10px 10px;
-}
-=======
     margin-right: 8px;
     margin-bottom: 0;
 }
@@ -245,4 +150,3 @@ input:focus {
         gap: 0;
     }
 }
->>>>>>> zyloi
