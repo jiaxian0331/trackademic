@@ -1914,6 +1914,7 @@ def complete_task():
     
     except Exception as e:
         return f'<h1>Error completing task: {str(e)}</h1><p><a href="/trackademic/timetable">Go back</a></p>'
+<<<<<<< HEAD
 
 # ============ HELPER FUNCTIONS FOR TRACKADEMIC ============
 def get_today_schedule(user_id):
@@ -2144,26 +2145,28 @@ def delete_comment(comment_id):
         db.commit()
     db.close()
     return redirect("/social/dashboard")
+=======
+>>>>>>> zyloi
 
 # ============ HELPER FUNCTIONS FOR TRACKADEMIC ============
-def get_today_schedule():
-    """Get today's schedule based on current day of week"""
+def get_today_schedule(user_id):
+    """Get today's schedule based on current day of week for specific user"""
     today = datetime.datetime.today().weekday()
     
     conn = get_db_connection()
     today_schedule = conn.execute('''
-        SELECT t.time_slot, s.subject_name, s.subject_code, t.task_description
+        SELECT t.time_slot, s.subject_name, s.subject_code, t.task_description, s.subject_id
         FROM timetable t 
         JOIN subjects s ON t.subject_id = s.subject_id
-        WHERE t.day = ?
+        WHERE t.user_id = ? AND t.day = ?
         ORDER BY t.time_slot
-    ''', (today,)).fetchall()
+    ''', (user_id, today)).fetchall()
     
     conn.close()
     return today_schedule
 
-def get_weekly_summary():
-    """Get summary of all scheduled tasks for the week"""
+def get_weekly_summary(user_id):
+    """Get summary of all scheduled tasks for the week for specific user"""
     conn = get_db_connection()
     
     weekly_summary = conn.execute('''
@@ -2177,9 +2180,10 @@ def get_weekly_summary():
             COUNT(*) as task_count
         FROM timetable t 
         JOIN subjects s ON t.subject_id = s.subject_id
+        WHERE t.user_id = ?
         GROUP BY t.day, s.subject_name, t.time_slot
         ORDER BY t.day, t.time_slot
-    ''').fetchall()
+    ''', (user_id,)).fetchall()
     
     conn.close()
     return weekly_summary

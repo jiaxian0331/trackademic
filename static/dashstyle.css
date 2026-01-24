@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 :root {
     --bg-color: #f0f2f5;
     --card-bg: #ffffff;
@@ -7,10 +8,13 @@
     --font: Arial, sans-serif;
 }
 
+=======
+>>>>>>> zyloi
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+<<<<<<< HEAD
 }
 
 body {
@@ -102,10 +106,313 @@ body {
     padding: 15px;
     border-radius: 12px;
     border: 1px solid var(--border-color);
+=======
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+main {
+    flex: 1;
+    width: 100%;
+}
+
+body {
+    background-color: #f5f7fa;
+    color: #333;
+    line-height: 1.6;
+    display: flex;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* Hide the checkbox */
+.sidebar-toggle {
+    display: none;
+}
+
+/* Sidebar Styles */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 250px;
+    height: 100vh;
+    background: linear-gradient(135deg, #2c3e50, #4a6491);
+    color: white;
+    transition: all 0.3s ease;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header {
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-header h2 {
+    font-size: 20px;
+    color: white;
+    margin: 0;
+    border: none;
+    padding: 0;
+}
+
+/* Toggle Button */
+.toggle-btn {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 20px;
+    padding: 5px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.toggle-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Navigation Links */
+.nav-links {
+    flex: 1;
+    padding: 20px 0;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    color: white;
+    text-decoration: none;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+}
+
+.nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-left-color: rgba(255, 255, 255, 0.3);
+}
+
+.nav-link.active {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-left-color: white;
+}
+
+.nav-icon {
+    font-size: 18px;
+    width: 30px;
+}
+
+.nav-text {
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.sidebar-footer {
+    padding: 15px 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    text-align: center;
+}
+
+/* Main Content */
+.main-content {
+    flex: 1;
+    margin-left: 250px;
+    transition: margin-left 0.3s ease;
+    min-height: 100vh;
+    background-color: #f5f7fa;
+}
+
+/* When sidebar is collapsed */
+.sidebar-toggle:checked ~ .sidebar {
+    width: 70px;
+}
+
+.sidebar-toggle:checked ~ .sidebar .nav-text,
+.sidebar-toggle:checked ~ .sidebar .sidebar-header h2,
+.sidebar-toggle:checked ~ .sidebar .sidebar-footer small {
+    display: none;
+}
+
+.sidebar-toggle:checked ~ .sidebar .toggle-icon {
+    transform: rotate(180deg);
+}
+
+.sidebar-toggle:checked ~ .sidebar .nav-icon {
+    width: auto;
+    margin: 0 auto;
+    font-size: 20px;
+}
+
+.sidebar-toggle:checked ~ .sidebar .nav-link {
+    justify-content: center;
+    padding: 15px 0;
+}
+
+.sidebar-toggle:checked ~ .main-content {
+    margin-left: 70px;
+}
+
+/* Dashboard Specific Styles */
+.container {
+    width: 100%;
+    max-width: 1200px;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    margin: 20px auto;
+}
+
+.subtitle {
+    font-size: 14px;
+    opacity: 0.8;
+    margin-bottom: 10px;
+}
+
+header {
+    background: linear-gradient(135deg, #2c3e50, #4a6491);
+    color: white;
+    padding: 20px;
+    text-align: center;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+h1 {
+    font-size: 28px;
+    margin-bottom: 5px;
+}
+
+.logout {
+    margin-top: 10px;
+}
+
+.logout a {
+    color: white;
+    text-decoration: none;
+    padding: 5px 10px;
+    border: 1px solid white;
+    border-radius: 3px;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.logout a:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.main-layout {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+}
+
+.sidebar-old {
+    width: 250px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid #eaeaea;
+}
+
+.nav-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.nav-item {
+    display: flex;
+    padding: 12px 15px;
+    cursor: pointer;
+    font-size: 16px;
+    border-radius: 4px;
+    text-decoration: none;
+    color: #2c3e50;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.nav-item:hover {
+    background-color: white;
+    border-color: #ddd;
+}
+
+.nav-item.active-nav {
+    background-color: white;
+    border-color: #ddd;
+    font-weight: 600;
+}
+
+.nav-item a {
+    text-decoration: none;
+    color: inherit;
+    width: 100%;
+}
+
+/* Remove the old header nav-links */
+.old-nav-links {
+    display: none;
+}
+
+.search-section {
+    margin-bottom: 20px;
+}
+
+.search-section form {
+    display: flex;
+    gap: 10px;
+}
+
+.search-section input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.search-section button {
+    background-color: #f8f9fa;
+    color: #333;
+    border: 1px solid #ddd;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.search-section button:hover {
+    background-color: #e9ecef;
+    border-color: #ccc;
+}
+
+.post-input-bar {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #eaeaea;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+>>>>>>> zyloi
 }
 
 .post-input-bar textarea {
     width: 100%;
+<<<<<<< HEAD
     padding: 10px;
     border-radius: 8px;
     border: 1px solid var(--border-color);
@@ -148,19 +455,90 @@ body {
 }
 
 .post-content {
+=======
+    padding: 12px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    resize: none;
+>>>>>>> zyloi
     font-size: 14px;
     margin-bottom: 10px;
 }
 
+<<<<<<< HEAD
 .post img {
     max-width: 100%;
     border-radius: 10px;
     margin-top: 8px;
+=======
+.post-input-bar input[type="file"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.post-input-bar button {
+    padding: 10px 20px;
+    background: #2c3e50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.post-input-bar button:hover {
+    background: #4a6491;
+}
+
+.posts-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.post {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #eaeaea;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.post-header {
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eaeaea;
+}
+
+.username {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 16px;
+}
+
+.post-content {
+    font-size: 14px;
+    margin-bottom: 15px;
+    color: #333;
+    line-height: 1.5;
+}
+
+.post img {
+    max-width: 100%;
+    border-radius: 4px;
+    margin-top: 10px;
+    border: 1px solid #eaeaea;
+>>>>>>> zyloi
 }
 
 .post-actions {
     display: flex;
     gap: 10px;
+<<<<<<< HEAD
     margin-top: 10px;
 }
 
@@ -183,11 +561,37 @@ body {
 .post-actions form[action*="delete_post"] button:hover {
     background: var(--danger);
     color: white;
+=======
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #eaeaea;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.post-actions button {
+    background: #f8f9fa;
+    color: #2c3e50;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+}
+
+.post-actions form[action*="delete_post"] button:hover {
+    background: #e41e3f;
+    color: white;
+    border-color: #e41e3f;
+>>>>>>> zyloi
 }
 
 .post-actions button[disabled] {
     opacity: 0.6;
     cursor: default;
+<<<<<<< HEAD
 }
 
 .folders-container {
@@ -274,3 +678,167 @@ body {
     color: white;
 }
 
+=======
+    background: #f8f9fa;
+    color: #999;
+    border-color: #eee;
+}
+
+select, input[type="text"] {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    background-color: white;
+}
+
+.comments {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #eaeaea;
+}
+
+.comments p {
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.comments form {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.comments input[type="text"] {
+    flex: 1;
+}
+
+.delete-comment-btn {
+    background: #f8f9fa;
+    color: #2c3e50;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.delete-comment-btn:hover {
+    background: #e41e3f;
+    color: white;
+    border-color: #e41e3f;
+}
+
+.flash-message {
+    margin: 10px 20px;
+    padding: 10px;
+    background-color: #d4edda;
+    color: #155724;
+    border-radius: 4px;
+    border: 1px solid #c3e6cb;
+}
+
+.flash-message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-color: #f5c6cb;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    body {
+        flex-direction: column;
+    }
+    
+    .sidebar {
+        position: relative;
+        width: 100%;
+        height: auto;
+        min-height: 60px;
+    }
+    
+    .main-content {
+        margin-left: 0;
+    }
+    
+    .sidebar-toggle:checked ~ .sidebar {
+        width: 100%;
+        height: auto;
+    }
+    
+    .sidebar-toggle:checked ~ .sidebar .nav-text,
+    .sidebar-toggle:checked ~ .sidebar .sidebar-header h2,
+    .sidebar-toggle:checked ~ .sidebar .sidebar-footer small {
+        display: block;
+    }
+    
+    .sidebar-toggle:checked ~ .sidebar .nav-icon {
+        width: 30px;
+        margin: 0;
+        font-size: 18px;
+    }
+    
+    .sidebar-toggle:checked ~ .sidebar .nav-link {
+        justify-content: flex-start;
+        padding: 12px 20px;
+    }
+    
+    .sidebar-toggle:checked ~ .sidebar .toggle-icon {
+        transform: rotate(0deg);
+    }
+    
+    .sidebar-toggle:checked ~ .main-content {
+        margin-left: 0;
+    }
+    
+    .nav-links {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .nav-link {
+        flex-direction: column;
+        text-align: center;
+        padding: 10px;
+        flex: 1;
+        min-width: 100px;
+    }
+    
+    .nav-icon {
+        margin-bottom: 5px;
+    }
+    
+    .sidebar-header {
+        padding: 10px 20px;
+    }
+    
+    .main-layout {
+        flex-direction: column;
+    }
+    
+    .sidebar-old {
+        width: 100%;
+    }
+    
+    .comments form {
+        flex-direction: column;
+    }
+    
+    .post-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .post-actions form {
+        width: 100%;
+    }
+    
+    .post-actions select,
+    .post-actions input[type="text"] {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+}
+>>>>>>> zyloi
