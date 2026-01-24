@@ -1,5 +1,4 @@
 from flask import Flask, render_template, request, redirect, session, url_for, flash, jsonify, json
-from flask_cors import CORS
 import sqlite3
 import os
 import datetime
