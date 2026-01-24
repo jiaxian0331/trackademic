@@ -6,100 +6,143 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='dashstyle.css') }}">
 </head>
 <body>
-<div class="container">
-    <header class="header">
-        <div class="logo"><img src="trackademiclogo.jpg" alt="Logo"></div>
-        <div class="dashboard-title">Dashboard</div>
-        <div class="logout"><a href="{{ url_for('logout') }}">Logout</a></div>
-    </header>
+    <!-- Left Side Navigation -->
+    <input type="checkbox" id="sidebar-toggle" class="sidebar-toggle">
+    
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <h2>Trackademic</h2>
+            <label for="sidebar-toggle" class="toggle-btn">
+                <span class="toggle-icon">←</span>
+            </label>
+        </div>
+        
+        <div class="nav-links">
+            <a href="/trackademic" class="nav-link">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-text">Home</span>
+            </a>
+            <a href="/trackademic/calculator" class="nav-link">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">GPA Calculator</span>
+            </a>
+            <a href="/trackademic/timetable" class="nav-link">
+                <span class="nav-icon">📅</span>
+                <span class="nav-text">Timetable</span>
+            </a>
+            <a href="/social/dashboard" class="nav-link active">
+                <span class="nav-icon">📋</span>
+                <span class="nav-text">Dashboard</span>
+            </a>
+            <a href="/logout" class="nav-link">
+                <span class="nav-icon">🔒</span>
+                <span class="nav-text">Logout</span>
+            </a>
+            <a href="/trackademic" class="nav-link">
+                <span class="nav-icon">⬅️</span>
+                <span class="nav-text">Back</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-footer">
+            <small>Click arrow to toggle</small>
+        </div>
+    </nav>
 
-    <div class="main-layout">
-        <aside class="sidebar">
-            <nav class="nav-menu">
-                <div class="nav-item user-profile active-nav">
-                    <a href="{{ url_for('social_dashboard') }}">{{ username }}</a>
-                </div>
-                <div class="nav-item"><a href="{{ url_for('saved_posts') }}">Saved Posts</a></div>
-                <div class="nav-item"><span>GPA/CGPA Calculation</span></div>
-                <div class="nav-item"><span>Planner</span></div>
-            </nav>
-        </aside>
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container">
+            <header>
+                <h1>Dashboard</h1>
+                <p class="subtitle">Study Notes Sharing Platform</p>
+            </header>
 
-        <main class="main-content">
-            <div class="search-section" style="margin-bottom: 20px;">
-                <form action="{{ url_for('social_dashboard') }}" method="GET">
-                    <input type="text" name="search" placeholder="Search for something..." value="{{ search_query }}">
-                    <button type="submit">Search</button>
-                </form>
-            </div>
+            <div class="main-layout">
+                <aside class="sidebar-old">
+                    <nav class="nav-menu">
+                        <div class="nav-item user-profile active-nav">
+                            <a href="{{ url_for('social_dashboard') }}">{{ username }}</a>
+                        </div>
+                        <div class="nav-item"><a href="{{ url_for('saved_posts') }}">Saved Posts</a></div>
+                    </nav>
+                </aside>
 
-            <div class="post-input-bar">
-                <form method="POST" enctype="multipart/form-data">
-                    <textarea name="content" placeholder="What's on your mind?" required></textarea>
-                    <input type="file" name="file">
-                    <button type="submit">Post</button>
-                </form>
-            </div>
-
-            <div class="posts-feed">
-                {% for post_id, content, filename, poster, post_user_id, is_saved, comments in posts %}
-                <div class="post">
-                    <p><strong>{{ poster }}</strong></p>
-                    <p>{{ content }}</p>
-
-                    {% if filename %}
-                        {% if filename.endswith(('.png', '.jpg', '.jpeg', '.gif')) %}
-                            <img src="{{ url_for('static', filename='uploads/' ~ filename) }}" alt="Post image" style="max-width:100%;">
-                        {% else %}
-                            <p>File: <a href="{{ url_for('static', filename='uploads/' ~ filename) }}">{{ filename }}</a></p>
-                        {% endif %}
-                    {% endif %}
-
-                    <div class="post-actions" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee;">
-                        {% if post_user_id == session['user_id'] %}
-                        <form action="{{ url_for('delete_post', post_id=post_id) }}" method="POST" style="display:inline;">
-                            <button type="submit">Delete</button>
+                <main>
+                    <div class="search-section" style="margin-bottom: 20px;">
+                        <form action="{{ url_for('social_dashboard') }}" method="GET">
+                            <input type="text" name="search" placeholder="Search for something..." value="{{ search_query }}">
+                            <button type="submit">Search</button>
                         </form>
-                        {% endif %}
-
-                        {% if is_saved %}
-                            <button disabled style="background:#ccc;">Saved</button>
-                        {% else %}
-                            <form action="{{ url_for('save_post', post_id=post_id) }}" method="POST" style="display:inline-block; margin-left:10px;">
-                                <select name="folder_id" style="padding: 2px;">
-                                    <option value="">-- Save to Folder --</option>
-                                    {% for f_id, f_name in folders %}
-                                        <option value="{{ f_id }}">{{ f_name }}</option>
-                                    {% endfor %}
-                                </select>
-                                <input type="text" name="new_folder_name" placeholder="Or new folder..." style="padding: 2px; width: 100px;">
-                                <button type="submit">Save</button>
-                            </form>
-                        {% endif %}
                     </div>
 
-                    <div class="comments">
-                        {% for comment_id, username, comment_text, comment_user_id in comments %}
-                        <p>
-                            <strong>{{ username }}:</strong> {{ comment_text }}
-                            {% if comment_user_id == session['user_id'] %}
-                            <form action="{{ url_for('delete_comment', comment_id=comment_id) }}" method="POST" style="display:inline;">
-                                <button type="submit" class="delete-comment-btn">Delete</button>
-                            </form>
+                    <div class="post-input-bar">
+                        <form method="POST" enctype="multipart/form-data">
+                            <textarea name="content" placeholder="What's on your mind?" required></textarea>
+                            <input type="file" name="file">
+                            <button type="submit">Post</button>
+                        </form>
+                    </div>
+
+                    <div class="posts-feed">
+                        {% for post_id, content, filename, poster, post_user_id, is_saved, comments in posts %}
+                        <div class="post">
+                            <p><strong>{{ poster }}</strong></p>
+                            <p>{{ content }}</p>
+
+                            {% if filename %}
+                                {% if filename.endswith(('.png', '.jpg', '.jpeg', '.gif')) %}
+                                    <img src="{{ url_for('static', filename='uploads/' ~ filename) }}" alt="Post image" style="max-width:100%;">
+                                {% else %}
+                                    <p>File: <a href="{{ url_for('static', filename='uploads/' ~ filename) }}">{{ filename }}</a></p>
+                                {% endif %}
                             {% endif %}
-                        </p>
-                        {% endfor %}
 
-                        <form action="{{ url_for('add_comment', post_id=post_id) }}" method="POST">
-                            <input type="text" name="comment" placeholder="Add a comment..." required>
-                            <button type="submit">Send</button>
-                        </form>
+                            <div class="post-actions" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee;">
+                                {% if post_user_id == session['user_id'] %}
+                                <form action="{{ url_for('delete_post', post_id=post_id) }}" method="POST" style="display:inline;">
+                                    <button type="submit">Delete</button>
+                                </form>
+                                {% endif %}
+
+                                {% if is_saved %}
+                                    <button disabled style="background:#ccc;">Saved</button>
+                                {% else %}
+                                    <form action="{{ url_for('save_post', post_id=post_id) }}" method="POST" style="display:inline-block; margin-left:10px;">
+                                        <select name="folder_id" style="padding: 2px;">
+                                            <option value="">-- Save to Folder --</option>
+                                            {% for f_id, f_name in folders %}
+                                                <option value="{{ f_id }}">{{ f_name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <input type="text" name="new_folder_name" placeholder="Or new folder..." style="padding: 2px; width: 100px;">
+                                        <button type="submit">Save</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+
+                            <div class="comments">
+                                {% for comment_id, username, comment_text, comment_user_id in comments %}
+                                <p>
+                                    <strong>{{ username }}:</strong> {{ comment_text }}
+                                    {% if comment_user_id == session['user_id'] %}
+                                    <form action="{{ url_for('delete_comment', comment_id=comment_id) }}" method="POST" style="display:inline;">
+                                        <button type="submit" class="delete-comment-btn">Delete</button>
+                                    </form>
+                                    {% endif %}
+                                </p>
+                                {% endfor %}
+
+                                <form action="{{ url_for('add_comment', post_id=post_id) }}" method="POST">
+                                    <input type="text" name="comment" placeholder="Add a comment..." required>
+                                    <button type="submit">Send</button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
-                </div>
-                {% endfor %}
+                </main>
             </div>
-        </main>
+        </div>
     </div>
-</div>
 </body>
 </html>

@@ -3,155 +3,175 @@
 <head>
     <meta charset="UTF-8">
     <title>Trackademic - Study Planner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='calculator.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 
 <body>
-    <div class="container">
-        <header>
-            <h1>TRACKADEMIC</h1>
-            <p class="subtitle">Study Planner & GPA Calculator</p>
-        </header>
+    <!-- Left Side Navigation -->
+    <input type="checkbox" id="sidebar-toggle" class="sidebar-toggle">
+    
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <h2>Trackademic</h2>
+            <label for="sidebar-toggle" class="toggle-btn">
+                <span class="toggle-icon">←</span>
+            </label>
+        </div>
+        
+        <div class="nav-links">
+            <a href="/trackademic" class="nav-link">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-text">Home</span>
+            </a>
+            <a href="/trackademic/calculator" class="nav-link">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">GPA Calculator</span>
+            </a>
+            <a href="/trackademic/timetable" class="nav-link active">
+                <span class="nav-icon">📅</span>
+                <span class="nav-text">Timetable</span>
+            </a>
+            <a href="/social/dashboard" class="nav-link">
+                <span class="nav-icon">📋</span>
+                <span class="nav-text">Dashboard</span>
+            </a>
+            <a href="/logout" class="nav-link">
+                <span class="nav-icon">🔒</span>
+                <span class="nav-text">Logout</span>
+            </a>
+            <a href="/trackademic" class="nav-link">
+                <span class="nav-icon">⬅️</span>
+                <span class="nav-text">Back</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-footer">
+            <small>Click arrow to toggle</small>
+        </div>
+    </nav>
 
-        <div class="main-layout">
-            <main class="middle-column">
-                <div class="section-header">
-                    <h2 class="schedule-title">Weekly Schedule</h2>
-                    {% if edit_mode %}
-                    <form method="GET" action="{{ url_for('timetable') }}">
-                        <button type="submit" class="edit-btn">View Mode</button>
-                    </form>
-                    {% else %}
-                    <form method="GET" action="{{ url_for('edit_timetable') }}">
-                        <button type="submit" class="edit-btn">Edit Schedule</button>
-                    </form>
-                    {% endif %}
-                </div>
-                
-                <section class="planner-table">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Monday</th>
-                                <th>Tuesday</th>
-                                <th>Wednesday</th>
-                                <th>Thursday</th>
-                                <th>Friday</th>
-                                <th>Saturday</th>
-                                <th>Sunday</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                {% for day in range(7) %}
-                                <td class="schedule-column">
-                                    <div class="schedule-grid">
-                                        {% if schedule.get(day) %}
-                                            {% for time_slot, subject_data in schedule[day].items() %}
-                                            <div class="schedule-cell filled">
-                                                <div class="cell-content">
-                                                    {% if not edit_mode %}
-                                                        <div class="cell-time">{{ time_slot }}</div>
-                                                    {% endif %}
-                                                    <div class="cell-subject">{{ subject_data.subject_name }}</div>
-                                                    {% if subject_data.task_description %}
-                                                    <div class="cell-task-description" style="font-size: 0.75rem; color: #666; margin-top: 2px;">
-                                                        {{ subject_data.task_description }}
-                                                    </div>
-                                                    {% endif %}
-                                                    <div class="cell-code">{{ subject_data.subject_code }}</div>
-                                                    {% if edit_mode %}
-                                                    <form method="POST" action="{{ url_for('remove_timetable') }}" class="remove-form">
-                                                        <input type="hidden" name="day" value="{{ day }}">
-                                                        <input type="hidden" name="time" value="{{ time_slot }}">
-                                                        <button type="submit" class="remove-btn" title="Remove">x</button>
-                                                    </form>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-                                            {% endfor %}
-                                        {% else %}
-                                            <div class="schedule-cell empty">
-                                                <div class="empty-state">
-                                                    <span class="empty-text">No classes scheduled</span>
-                                                </div>
-                                            </div>
-                                        {% endif %}
-                                        
-                                        {% if edit_mode %}
-                                        <div class="schedule-cell empty-cell">
-                                            <form method="GET" action="{{ url_for('add_subject_form') }}" class="add-form">
-                                                <input type="hidden" name="day" value="{{ day }}">
-                                                <input type="hidden" name="time" value="">
-                                                <button type="submit" class="add-box-btn">
-                                                    <div class="add-box-content">
-                                                        <span class="plus-icon">+</span>
-                                                        <span class="add-text">Add Task</span>
-                                                    </div>
-                                                </button>
-                                            </form>
-                                        </div>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                                {% endfor %}
-                            </tr>
-                        </tbody>
-                    </table>
-                    
-                    {% if edit_mode %}
-                    <div class="edit-actions">
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container">
+            <!-- Header without navigation buttons -->
+            <header>
+                <h1>Study Planner</h1>
+                <p class="subtitle">Weekly Schedule & Task Management</p>
+            </header>
+
+            <div class="main-layout">
+                <main class="middle-column">
+                    <div class="section-header">
+                        <h2 class="schedule-title">Weekly Schedule</h2>
+                        {% if edit_mode %}
                         <form method="GET" action="{{ url_for('timetable') }}">
-                            <button type="submit" class="save-btn">Save & Exit</button>
+                            <button type="submit" class="edit-btn">View Mode</button>
                         </form>
-                        <form method="POST" action="{{ url_for('clear_timetable') }}">
-                            <button type="submit" class="clear-btn" onclick="return confirm('Clear all scheduled subjects?')">Clear All</button>
+                        {% else %}
+                        <form method="GET" action="{{ url_for('edit_timetable') }}">
+                            <button type="submit" class="edit-btn">Edit Schedule</button>
                         </form>
+                        {% endif %}
                     </div>
-                    {% endif %}
-                </section>
-            </main>
+                    
+                    <section class="planner-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Monday</th>
+                                    <th>Tuesday</th>
+                                    <th>Wednesday</th>
+                                    <th>Thursday</th>
+                                    <th>Friday</th>
+                                    <th>Saturday</th>
+                                    <th>Sunday</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    {% for day in range(7) %}
+                                    <td class="schedule-column">
+                                        <div class="schedule-grid">
+                                            {% if schedule.get(day) %}
+                                                {% for time_slot, subject_data in schedule[day].items() %}
+                                                <div class="schedule-cell filled">
+                                                    <div class="cell-content">
+                                                        {% if not edit_mode %}
+                                                            <div class="cell-time">{{ time_slot }}</div>
+                                                        {% endif %}
+                                                        <div class="cell-subject">{{ subject_data.subject_name }}</div>
+                                                        {% if subject_data.task_description %}
+                                                        <div class="cell-task-description" style="font-size: 0.75rem; color: #666; margin-top: 2px;">
+                                                            {{ subject_data.task_description }}
+                                                        </div>
+                                                        {% endif %}
+                                                        <div class="cell-code">{{ subject_data.subject_code }}</div>
+                                                        {% if edit_mode %}
+                                                        <form method="POST" action="{{ url_for('remove_timetable') }}" class="remove-form">
+                                                            <input type="hidden" name="day" value="{{ day }}">
+                                                            <input type="hidden" name="time" value="{{ time_slot }}">
+                                                            <button type="submit" class="remove-btn" title="Remove">x</button>
+                                                        </form>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                            {% else %}
+                                                <div class="schedule-cell empty">
+                                                    <div class="empty-state">
+                                                        <span class="empty-text">No classes scheduled</span>
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                            
+                                            {% if edit_mode %}
+                                            <div class="schedule-cell empty-cell">
+                                                <form method="GET" action="{{ url_for('add_subject_form') }}" class="add-form">
+                                                    <input type="hidden" name="day" value="{{ day }}">
+                                                    <input type="hidden" name="time" value="">
+                                                    <button type="submit" class="add-box-btn">
+                                                        <div class="add-box-content">
+                                                            <span class="plus-icon">+</span>
+                                                            <span class="add-text">Add Task</span>
+                                                        </div>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    {% endfor %}
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        {% if edit_mode %}
+                        <div class="edit-actions">
+                            <form method="GET" action="{{ url_for('timetable') }}">
+                                <button type="submit" class="save-btn">Save & Exit</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('clear_timetable') }}">
+                                <button type="submit" class="clear-btn" onclick="return confirm('Clear all scheduled subjects?')">Clear All</button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </section>
+                </main>
 
-            <aside class="right-column">
-                <div class="section-header">
-                    <h2 class="schedule-title">Weekly Summary</h2>
-                </div>
+                <aside class="right-column">
+                    <div class="section-header">
+                        <h2 class="schedule-title">Weekly Summary</h2>
+                    </div>
 
-                <div class="status-info">
-                    <h3>Today's Tasks</h3>
-                    {% if today_schedule %}
-                    <ul class="today-schedule">
-                        {% for item in today_schedule %}
-                        <li>
-                            <div>
-                                <span class="schedule-time">{{ item.time_slot }}</span>
-                                <div class="schedule-subject">{{ item.subject_name }}</div>
-                                {% if item.task_description %}
-                                <small style="color: #666; font-size: 0.8rem; margin-top: 3px; display: block;">
-                                    {{ item.task_description }}
-                                </small>
-                                {% endif %}
-                                <small style="color: #888; font-size: 0.75rem;">{{ item.subject_code }}</small>
-                            </div>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    {% else %}
-                    <p style="color: #666; font-style: italic; padding: 10px 0;">No tasks scheduled for today</p>
-                    {% endif %}
-
-                    <h3 style="margin-top: 25px;">Week Overview</h3>
-                    {% if weekly_summary %}
-                    <ul class="today-schedule">
-                        {% for item in weekly_summary %}
-                        <li>
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                                <div style="flex-grow: 1;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                                        <span class="schedule-time">{{ ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][item.day] }}</span>
-                                        <span style="margin: 0 5px;">-</span>
-                                        <span class="schedule-time">{{ item.time_slot }}</span>
-                                    </div>
+                    <div class="status-info">
+                        <h3>Today's Tasks</h3>
+                        {% if today_schedule %}
+                        <ul class="today-schedule">
+                            {% for item in today_schedule %}
+                            <li>
+                                <div>
+                                    <span class="schedule-time">{{ item.time_slot }}</span>
                                     <div class="schedule-subject">{{ item.subject_name }}</div>
                                     {% if item.task_description %}
                                     <small style="color: #666; font-size: 0.8rem; margin-top: 3px; display: block;">
@@ -160,25 +180,53 @@
                                     {% endif %}
                                     <small style="color: #888; font-size: 0.75rem;">{{ item.subject_code }}</small>
                                 </div>
-                                <!-- Green tick button -->
-                                <form method="POST" action="{{ url_for('complete_task') }}" class="complete-form" 
-                                      style="margin-left: 10px;">
-                                    <input type="hidden" name="day" value="{{ item.day }}">
-                                    <input type="hidden" name="time_slot" value="{{ item.time_slot }}">
-                                    <input type="hidden" name="subject_id" value="{{ item.subject_id }}">
-                                    <button type="submit" class="complete-btn" title="Mark as done">
-                                        ✓
-                                    </button>
-                                </form>
-                            </div>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    {% else %}
-                    <p style="color: #666; font-style: italic; padding: 10px 0;">No tasks scheduled this week</p>
-                    {% endif %}
-                </div>
-            </aside>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p style="color: #666; font-style: italic; padding: 10px 0;">No tasks scheduled for today</p>
+                        {% endif %}
+
+                        <h3 style="margin-top: 25px;">Week Overview</h3>
+                        {% if weekly_summary %}
+                        <ul class="today-schedule">
+                            {% for item in weekly_summary %}
+                            <li>
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                    <div style="flex-grow: 1;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <span class="schedule-time">{{ ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][item.day] }}</span>
+                                            <span style="margin: 0 5px;">-</span>
+                                            <span class="schedule-time">{{ item.time_slot }}</span>
+                                        </div>
+                                        <div class="schedule-subject">{{ item.subject_name }}</div>
+                                        {% if item.task_description %}
+                                        <small style="color: #666; font-size: 0.8rem; margin-top: 3px; display: block;">
+                                            {{ item.task_description }}
+                                        </small>
+                                        {% endif %}
+                                        <small style="color: #888; font-size: 0.75rem;">{{ item.subject_code }}</small>
+                                    </div>
+                                    <!-- Green tick button -->
+                                    <form method="POST" action="{{ url_for('complete_task') }}" class="complete-form" 
+                                          style="margin-left: 10px;">
+                                        <input type="hidden" name="day" value="{{ item.day }}">
+                                        <input type="hidden" name="time_slot" value="{{ item.time_slot }}">
+                                        <input type="hidden" name="subject_id" value="{{ item.subject_id }}">
+                                        <button type="submit" class="complete-btn" title="Mark as done">
+                                            ✓
+                                        </button>
+                                    </form>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p style="color: #666; font-style: italic; padding: 10px 0;">No tasks scheduled this week</p>
+                        {% endif %}
+                    </div>
+                </aside>
+            </div>
         </div>
     </div>
 </body>

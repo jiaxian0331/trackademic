@@ -6,86 +6,125 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='dashstyle.css') }}">
 </head>
 <body>
-<div class="container">
-    <header class="header">
-        <div class="logo"><img src="{{ url_for('static', filename='trackademiclogo.png') }}" alt="Logo"></div>
-        <div class="dashboard-title">Saved Posts</div>
-        <div class="logout"><a href="{{ url_for('logout') }}">Logout</a></div>
-    </header>
+    <!-- Left Side Navigation -->
+    <input type="checkbox" id="sidebar-toggle" class="sidebar-toggle">
+    
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <h2>Trackademic</h2>
+            <label for="sidebar-toggle" class="toggle-btn">
+                <span class="toggle-icon">←</span>
+            </label>
+        </div>
+        
+        <div class="nav-links">
+            <a href="/trackademic" class="nav-link">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-text">Home</span>
+            </a>
+            <a href="/trackademic/calculator" class="nav-link">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">GPA Calculator</span>
+            </a>
+            <a href="/trackademic/timetable" class="nav-link">
+                <span class="nav-icon">📅</span>
+                <span class="nav-text">Timetable</span>
+            </a>
+            <a href="/social/dashboard" class="nav-link">
+                <span class="nav-icon">📋</span>
+                <span class="nav-text">Dashboard</span>
+            </a>
+            <a href="/logout" class="nav-link">
+                <span class="nav-icon">🔒</span>
+                <span class="nav-text">Logout</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-footer">
+            <small>Click arrow to toggle</small>
+        </div>
+    </nav>
 
-    <div class="main-layout">
-        <aside class="sidebar">
-            <nav class="nav-menu">
-                <div class="nav-item user-profile">
-                    <a href="{{ url_for('dashboard') }}">{{ username }}</a>
-                </div>
-                <div class="nav-item active-nav">
-                    <a href="{{ url_for('saved_posts') }}">Saved Posts</a>
-                </div>
-                <div class="nav-item"><span>GPA/CGPA Calculation</span></div>
-                <div class="nav-item"><span>Planner</span></div>
-            </nav>
-        </aside>
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container">
+            <header>
+                <h1>Dashboard</h1>
+                <p class="subtitle">Study Notes Sharing Platform</p>
+            </header>
 
-        <main class="main-content">
-            <div class="search-section" style="margin-bottom: 20px;">
-                <form action="{{ url_for('saved_posts') }}" method="GET">
-                    <input type="text" name="search" placeholder="Search saved content..." value="{{ search_query }}">
-                    <button type="submit">Search</button>
-                </form>
-            </div>
+            <div class="main-layout">
+                <aside class="sidebar-old">
+                    <nav class="nav-menu">
+                        <div class="nav-item user-profile">
+                            <a href="{{ url_for('social_dashboard') }}">{{ username }}</a>
+                        </div>
+                        <div class="nav-item active-nav">
+                            <a href="{{ url_for('saved_posts') }}">Saved Posts</a>
+                        </div>
+                    </nav>
+                </aside>
 
-            <div class="folders-container">
-                {% if not organized %}
-                    <div class="post">
-                        <p>No posts saved or match found.</p>
+                <main>
+                    <div class="search-section" style="margin-bottom: 20px;">
+                        <form action="{{ url_for('saved_posts') }}" method="GET">
+                            <input type="text" name="search" placeholder="Search saved content..." value="{{ search_query }}">
+                            <button type="submit">Search</button>
+                        </form>
                     </div>
-                {% endif %}
 
-                {% for folder_name, posts in organized.items() %}
-                    <div class="folder-group">
-                        <h2 class="folder-header" onclick="toggleFolder(this)">
-                            📁 {{ folder_name }}
-                        </h2>
-                        
-                        <div class="folder-content">
-                            {% for post in posts %}
-                            <div class="post-card">
-                                <p><strong>{{ post.poster }}</strong></p>
-                                <p>{{ post.content }}</p>
+                    <div class="folders-container">
+                        {% if not organized %}
+                            <div class="post">
+                                <p>No posts saved or match found.</p>
+                            </div>
+                        {% endif %}
+
+                        {% for folder_name, posts in organized.items() %}
+                            <div class="folder-group">
+                                <h2 class="folder-header" onclick="toggleFolder(this)">
+                                    📁 {{ folder_name }}
+                                </h2>
                                 
-                                {% if post.file %}
-                                    {% if post.file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')) %}
-                                        <div class="image-container">
-                                            <a href="{{ url_for('static', filename='uploads/' ~ post.file) }}" target="_blank">
-                                                <img src="{{ url_for('static', filename='uploads/' ~ post.file) }}" 
-                                                     alt="Saved image" 
-                                                     class="post-image-preview">
-                                            </a>
+                                <div class="folder-content">
+                                    {% for post in posts %}
+                                    <div class="post-card">
+                                        <p><strong>{{ post.poster }}</strong></p>
+                                        <p>{{ post.content }}</p>
+                                        
+                                        {% if post.file %}
+                                            {% if post.file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')) %}
+                                                <div class="image-container">
+                                                    <a href="{{ url_for('static', filename='uploads/' ~ post.file) }}" target="_blank">
+                                                        <img src="{{ url_for('static', filename='uploads/' ~ post.file) }}" 
+                                                             alt="Saved image" 
+                                                             class="post-image-preview">
+                                                    </a>
+                                                </div>
+                                            {% else %}
+                                                <div class="file-link">
+                                                    <a href="{{ url_for('static', filename='uploads/' ~ post.file) }}" target="_blank">
+                                                        📄 Open: {{ post.file }}
+                                                    </a>
+                                                </div>
+                                            {% endif %}
+                                        {% endif %}
+                                        
+                                        <div class="post-actions">
+                                            <form action="{{ url_for('unsave', sp_id=post.sp_id) }}" method="POST">
+                                                <button type="submit" class="remove-btn">Remove</button>
+                                            </form>
                                         </div>
-                                    {% else %}
-                                        <div class="file-link">
-                                            <a href="{{ url_for('static', filename='uploads/' ~ post.file) }}" target="_blank">
-                                                📄 Open: {{ post.file }}
-                                            </a>
-                                        </div>
-                                    {% endif %}
-                                {% endif %}
-                                
-                                <div class="post-actions">
-                                    <form action="{{ url_for('unsave', sp_id=post.sp_id) }}" method="POST">
-                                        <button type="submit" class="remove-btn">Remove</button>
-                                    </form>
+                                    </div>
+                                    {% endfor %}
                                 </div>
                             </div>
-                            {% endfor %}
-                        </div>
+                        {% endfor %}
                     </div>
-                {% endfor %}
+                </main>
             </div>
-        </main>
+        </div>
     </div>
-</div>
 
 <script>
     function toggleFolder(header) {
