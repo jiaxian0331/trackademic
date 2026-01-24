@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Trackademic</title>
+  <style>
+    /* ===== BASIC RESET ===== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      display: flex;
+      height: 100vh;
+      background-color: #f5f7fa;
+    }
+
+    /* ===== SIDEBAR ===== */
+    .sidebar {
+      width: 220px;
+      background-color: #1f2937; /* dark gray */
+      color: white;
+      padding: 20px;
+    }
+
+    .logo {
+  display: flex;
+  flex-direction: column;   /* stack image and text vertically */
+  align-items: center;      /* center horizontally */
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+   .logo-icon {
+  width: 145px;              /* adjust if needed */
+  height: 145px;
+  object-fit: contain;
+  margin-bottom: 10px;      /* space between logo & text */
+}
+
+
+    .logo-text {
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
+}
+
+
+    /* ===== NAVIGATION ===== */
+    .nav {
+      list-style: none;
+    }
+
+    .nav li {
+      margin-bottom: 15px;
+    }
+
+    .nav a {
+      text-decoration: none;
+      color: #d1d5db;
+      font-size: 15px;
+      padding: 10px;
+      display: block;
+      border-radius: 6px;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .nav a:hover {
+      background-color: #374151;
+      color: white;
+    }
+
+    /* ===== MAIN CONTENT ===== */
+    .main {
+      flex: 1;
+      padding: 30px;
+    }
+
+    .main h1 {
+      margin-bottom: 10px;
+      font-size: 26px;
+    }
+
+    .main p {
+      color: #4b5563;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background-color: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      max-width: 500px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="logo">
+      <div class="logo">
+  <img src="c:\Users\zyloi\Downloads\trackademic.logo.jpg" alt="Trackademic Logo" class="logo-icon">
+  </div>
+
+    </div>
+
+    <ul class="nav">
+      <li><a href="#">Planner</a></li>
+      <li><a href="#">GPA / CGPA Calculator</a></li>
+      <li><a href="#">Study Resources</a></li>
+    </ul>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main">
+    <h1>Welcome to Trackademic</h1>
+  </div>
+
+</body>
+</html>

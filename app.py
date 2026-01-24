@@ -184,6 +184,63 @@ def init_databases():
     
     conn.commit()
     conn.close()
+    
+    # Initialize Social Database
+    db = get_social_db_connection()
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT,
+            email TEXT UNIQUE,
+            password TEXT,
+            is_admin INTEGER DEFAULT 0
+        )
+    """)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS posts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            content TEXT,
+            filename TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+    """)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            post_id INTEGER,
+            user_id INTEGER,
+            username TEXT,
+            comment TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(post_id) REFERENCES posts(id)
+        )
+    """)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS folders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            folder_name TEXT,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+    """)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS saved_posts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            post_id INTEGER,
+            folder_id INTEGER,
+            FOREIGN KEY(user_id) REFERENCES users(id),
+            FOREIGN KEY(post_id) REFERENCES posts(id),
+            FOREIGN KEY(folder_id) REFERENCES folders(id)
+        )
+    """)
+    db.commit()
+    db.close()
+    
+    # Check if admin exists, if not create one
+    create_admin_user()
 
 def create_admin_user():
     """Create admin user if it doesn't exist"""
@@ -1893,6 +1950,235 @@ def get_weekly_summary(user_id):
         GROUP BY t.day, s.subject_name, t.time_slot
         ORDER BY t.day, t.time_slot
     ''', (user_id,)).fetchall()
+    
+    conn.close()
+    return weekly_summary
+
+# ============ SOCIAL APP ROUTES ============
+@app.route('/social/dashboard', methods=['GET', 'POST'])
+def social_dashboard():
+    """Social platform dashboard"""
+    if "user_id" not in session:
+        return redirect("/login")
+    
+    session['app_mode'] = 'social'
+    
+    user_id = session["user_id"]
+    username = session["username"]
+    search_query = request.args.get('search', '')
+
+    if request.method == "POST":
+        content = request.form.get("content")
+        file = request.files.get("file")
+        filename = None
+        if file and file.filename:
+            filename = file.filename
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        db = get_social_db_connection()
+        db.execute("INSERT INTO posts (user_id, content, filename) VALUES (?, ?, ?)", (user_id, content, filename))
+        db.commit()
+        db.close()
+        return redirect("/social/dashboard")
+
+    db = get_social_db_connection()
+    
+    # Get folders
+    cursor = db.execute("""
+        SELECT DISTINCT folders.id, folders.folder_name 
+        FROM folders 
+        JOIN saved_posts ON folders.id = saved_posts.folder_id 
+        WHERE folders.user_id=?
+    """, (user_id,))
+    folders = cursor.fetchall()
+
+    # Get posts
+    query = """
+        SELECT 
+            posts.id, posts.content, posts.filename, users.username, posts.user_id,
+            EXISTS(SELECT 1 FROM saved_posts WHERE post_id = posts.id AND user_id = ?) as is_saved
+        FROM posts 
+        JOIN users ON posts.user_id = users.id
+    """
+    params = [user_id]
+    if search_query:
+        query += " WHERE posts.content LIKE ? OR users.username LIKE ?"
+        params.append(f'%{search_query}%')
+        params.append(f'%{search_query}%')
+
+    query += " ORDER BY posts.id DESC"
+    cursor = db.execute(query, params)
+    posts = cursor.fetchall()
+    
+    # Get comments for each post
+    posts_with_comments = []
+    for post in posts:
+        cursor = db.execute(
+            "SELECT id, username, comment, user_id FROM comments WHERE post_id=? ORDER BY created_at ASC",
+            (post[0],)
+        )
+        comments = cursor.fetchall()
+        posts_with_comments.append((*post, comments))
+
+    db.close()
+    
+    return render_template("dashboard.html", 
+                         username=username, 
+                         posts=posts_with_comments, 
+                         folders=folders, 
+                         search_query=search_query,
+                         app_mode='social')
+
+@app.route("/social/save_post/<int:post_id>", methods=["POST"])
+def save_post(post_id):
+    if "user_id" not in session: return redirect("/login")
+    user_id = session["user_id"]
+    folder_id = request.form.get("folder_id")
+    new_folder_name = request.form.get("new_folder_name")
+
+    db = get_social_db_connection()
+    if new_folder_name and new_folder_name.strip():
+        cursor = db.execute("INSERT INTO folders (user_id, folder_name) VALUES (?, ?)", 
+                            (user_id, new_folder_name.strip()))
+        folder_id = cursor.lastrowid
+    
+    if folder_id:
+        db.execute("INSERT INTO saved_posts (user_id, post_id, folder_id) VALUES (?, ?, ?)", 
+                   (user_id, post_id, folder_id))
+        db.commit()
+    db.close()
+    return redirect("/social/dashboard")
+
+@app.route("/social/saved")
+def saved_posts():
+    if "user_id" not in session: return redirect("/login")
+    user_id = session["user_id"]
+    search_query = request.args.get('search', '')
+    db = get_social_db_connection()
+    query = """
+        SELECT f.folder_name, p.content, p.filename, u.username, sp.id
+        FROM saved_posts sp
+        JOIN folders f ON sp.folder_id = f.id
+        JOIN posts p ON sp.post_id = p.id
+        JOIN users u ON p.user_id = u.id
+        WHERE sp.user_id = ?
+    """
+    params = [user_id]
+    if search_query:
+        query += " AND (p.content LIKE ? OR f.folder_name LIKE ?)"
+        params.append(f'%{search_query}%')
+        params.append(f'%{search_query}%')
+
+    cursor = db.execute(query, params)
+    data = cursor.fetchall()
+    organized = {}
+    for folder, content, file, poster, sp_id in data:
+        if folder not in organized: organized[folder] = []
+        organized[folder].append({'content': content, 'file': file, 'poster': poster, 'sp_id': sp_id})
+    db.close()
+    return render_template("saved.html", organized=organized, username=session["username"], search_query=search_query, app_mode='social')
+
+@app.route("/social/unsave/<int:sp_id>", methods=["POST"])
+def unsave(sp_id):
+    if "user_id" not in session: return redirect("/login")
+    user_id = session["user_id"]
+    db = get_social_db_connection()
+    
+    # Check if folder becomes empty after deletion
+    cursor = db.execute("SELECT folder_id FROM saved_posts WHERE id=? AND user_id=?", (sp_id, user_id))
+    result = cursor.fetchone()
+    
+    if result:
+        folder_id = result[0]
+        db.execute("DELETE FROM saved_posts WHERE id=? AND user_id=?", (sp_id, user_id))
+        
+        # Check if any posts are still in this folder
+        check = db.execute("SELECT COUNT(*) FROM saved_posts WHERE folder_id=?", (folder_id,)).fetchone()
+        if check[0] == 0:
+            # Delete the folder if it's empty
+            db.execute("DELETE FROM folders WHERE id=?", (folder_id,))
+            
+    db.commit()
+    db.close()
+    return redirect("/social/saved")
+
+@app.route("/social/delete_post/<int:post_id>", methods=["POST"])
+def delete_post(post_id):
+    if "user_id" not in session: return redirect("/login")
+    user_id = session["user_id"]
+    db = get_social_db_connection()
+    cursor = db.execute("SELECT filename FROM posts WHERE id=? AND user_id=?", (post_id, user_id))
+    result = cursor.fetchone()
+    if result:
+        filename = result[0]
+        if filename:
+            path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            if os.path.exists(path): os.remove(path)
+        db.execute("DELETE FROM posts WHERE id=? AND user_id=?", (post_id, user_id))
+        db.execute("DELETE FROM comments WHERE post_id=?", (post_id,))
+        db.execute("DELETE FROM saved_posts WHERE post_id=?", (post_id,))
+    db.commit()
+    db.close()
+    return redirect("/social/dashboard")
+
+@app.route("/social/comment/<int:post_id>", methods=["POST"])
+def add_comment(post_id):
+    if "user_id" not in session: return redirect("/login")
+    comment_text = request.form.get("comment")
+    if comment_text:
+        db = get_social_db_connection()
+        db.execute("INSERT INTO comments (post_id, user_id, username, comment) VALUES (?, ?, ?, ?)",
+                   (post_id, session["user_id"], session["username"], comment_text))
+        db.commit()
+        db.close()
+    return redirect("/social/dashboard")
+
+@app.route("/social/delete_comment/<int:comment_id>", methods=["POST"])
+def delete_comment(comment_id):
+    if "user_id" not in session: return redirect("/login")
+    db = get_social_db_connection()
+    cursor = db.execute("SELECT user_id FROM comments WHERE id=?", (comment_id,))
+    result = cursor.fetchone()
+    if result and result[0] == session["user_id"]:
+        db.execute("DELETE FROM comments WHERE id=?", (comment_id,))
+        db.commit()
+    db.close()
+    return redirect("/social/dashboard")
+
+# ============ HELPER FUNCTIONS FOR TRACKADEMIC ============
+def get_today_schedule():
+    """Get today's schedule based on current day of week"""
+    today = datetime.datetime.today().weekday()
+    
+    conn = get_db_connection()
+    today_schedule = conn.execute('''
+        SELECT t.time_slot, s.subject_name, s.subject_code, t.task_description
+        FROM timetable t 
+        JOIN subjects s ON t.subject_id = s.subject_id
+        WHERE t.day = ?
+        ORDER BY t.time_slot
+    ''', (today,)).fetchall()
+    
+    conn.close()
+    return today_schedule
+
+def get_weekly_summary():
+    """Get summary of all scheduled tasks for the week"""
+    conn = get_db_connection()
+    
+    weekly_summary = conn.execute('''
+        SELECT 
+            t.day,
+            t.time_slot,
+            s.subject_name,
+            s.subject_code,
+            s.subject_id,
+            t.task_description,
+            COUNT(*) as task_count
+        FROM timetable t 
+        JOIN subjects s ON t.subject_id = s.subject_id
+        GROUP BY t.day, s.subject_name, t.time_slot
+        ORDER BY t.day, t.time_slot
+    ''').fetchall()
     
     conn.close()
     return weekly_summary
