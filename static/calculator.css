@@ -9,27 +9,175 @@ body {
     background-color: #f5f7fa;
     color: #333;
     line-height: 1.6;
+    display: flex;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* Hide the checkbox */
+.sidebar-toggle {
+    display: none;
+}
+
+/* Sidebar Styles */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 250px;
+    height: 100vh;
+    background: linear-gradient(135deg, #2c3e50, #4a6491);
+    color: white;
+    transition: all 0.3s ease;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header {
     padding: 20px;
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-header h2 {
+    font-size: 20px;
+    color: white;
+    margin: 0;
+    border: none;
+    padding: 0;
+}
+
+/* Toggle Button */
+.toggle-btn {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 20px;
+    padding: 5px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.toggle-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Navigation Links */
+.nav-links {
+    flex: 1;
+    padding: 20px 0;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    color: white;
+    text-decoration: none;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+}
+
+.nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-left-color: rgba(255, 255, 255, 0.3);
+}
+
+.nav-link.active {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-left-color: white;
+}
+
+.nav-icon {
+    font-size: 18px;
+    width: 30px;
+}
+
+.nav-text {
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.sidebar-footer {
+    padding: 15px 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    text-align: center;
+}
+
+/* Main Content */
+.main-content {
+    flex: 1;
+    margin-left: 250px;
+    transition: margin-left 0.3s ease;
     min-height: 100vh;
+    background-color: #f5f7fa;
 }
 
 .container {
-    width: 100%;
     max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
     background-color: white;
     border-radius: 10px;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
     overflow: hidden;
 }
 
+/* When sidebar is collapsed */
+.sidebar-toggle:checked ~ .sidebar {
+    width: 70px;
+}
+
+.sidebar-toggle:checked ~ .sidebar .nav-text,
+.sidebar-toggle:checked ~ .sidebar .sidebar-header h2,
+.sidebar-toggle:checked ~ .sidebar .sidebar-footer small {
+    display: none;
+}
+
+.sidebar-toggle:checked ~ .sidebar .toggle-icon {
+    transform: rotate(180deg);
+}
+
+.sidebar-toggle:checked ~ .sidebar .nav-icon {
+    width: auto;
+    margin: 0 auto;
+    font-size: 20px;
+}
+
+.sidebar-toggle:checked ~ .sidebar .nav-link {
+    justify-content: center;
+    padding: 15px 0;
+}
+
+.sidebar-toggle:checked ~ .main-content {
+    margin-left: 70px;
+}
+
+/* Header */
 header {
     background: linear-gradient(135deg, #2c3e50, #4a6491);
     color: white;
     padding: 20px;
     text-align: center;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.subtitle {
+    font-size: 14px;
+    opacity: 0.8;
+    margin-bottom: 10px;
 }
 
 h1 {
@@ -45,6 +193,7 @@ h2 {
     color: #2c3e50;
 }
 
+/* Table Styles */
 table {
     width: calc(100% - 40px);
     margin: 0 20px 20px;
@@ -321,7 +470,75 @@ select, input {
     border-bottom: none;
 }
 
+/* Responsive Design */
 @media (max-width: 768px) {
+    body {
+        flex-direction: column;
+    }
+    
+    .sidebar {
+        position: relative;
+        width: 100%;
+        height: auto;
+        min-height: 60px;
+    }
+    
+    .main-content {
+        margin-left: 0;
+    }
+    
+    .sidebar-toggle:checked ~ .sidebar {
+        width: 100%;
+        height: auto;
+    }
+    
+    .sidebar-toggle:checked ~ .sidebar .nav-text,
+    .sidebar-toggle:checked ~ .sidebar .sidebar-header h2,
+    .sidebar-toggle:checked ~ .sidebar .sidebar-footer small {
+        display: block;
+    }
+    
+    .sidebar-toggle:checked ~ .sidebar .nav-icon {
+        width: 30px;
+        margin: 0;
+        font-size: 18px;
+    }
+    
+    .sidebar-toggle:checked ~ .sidebar .nav-link {
+        justify-content: flex-start;
+        padding: 12px 20px;
+    }
+    
+    .sidebar-toggle:checked ~ .sidebar .toggle-icon {
+        transform: rotate(0deg);
+    }
+    
+    .sidebar-toggle:checked ~ .main-content {
+        margin-left: 0;
+    }
+    
+    .nav-links {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .nav-link {
+        flex-direction: column;
+        text-align: center;
+        padding: 10px;
+        flex: 1;
+        min-width: 100px;
+    }
+    
+    .nav-icon {
+        margin-bottom: 5px;
+    }
+    
+    .sidebar-header {
+        padding: 10px 20px;
+    }
+    
     table {
         display: block;
         overflow-x: auto;
