@@ -91,14 +91,15 @@
                                         <div class="schedule-grid">
                                             {% if schedule.get(day) %}
                                                 {% for time_slot, subject_data in schedule[day].items() %}
-                                                <div class="schedule-cell filled">
+                                                <div class="schedule-cell filled 
+                                                    {% if completed_tasks.get(day|string + '_' + time_slot|string) %}completed{% endif %}">
                                                     <div class="cell-content">
                                                         {% if not edit_mode %}
                                                             <div class="cell-time">{{ time_slot }}</div>
                                                         {% endif %}
                                                         <div class="cell-subject">{{ subject_data.subject_name }}</div>
                                                         {% if subject_data.task_description %}
-                                                        <div class="cell-task-description" style="font-size: 0.75rem; color: #666; margin-top: 2px;">
+                                                        <div class="cell-task-description">
                                                             {{ subject_data.task_description }}
                                                         </div>
                                                         {% endif %}
@@ -110,6 +111,11 @@
                                                             <button type="submit" class="remove-btn" title="Remove">x</button>
                                                         </form>
                                                         {% endif %}
+                                                        {% if completed_tasks.get(day|string + '_' + time_slot|string) %}
+                                                        <div class="task-completed-indicator">
+                                                            ✓
+                                                        </div>
+                                                        {% endif %}
                                                     </div>
                                                 </div>
                                                 {% endfor %}
@@ -120,7 +126,7 @@
                                                     </div>
                                                 </div>
                                             {% endif %}
-                                            
+ 
                                             {% if edit_mode %}
                                             <div class="schedule-cell empty-cell">
                                                 <form method="GET" action="{{ url_for('add_subject_form') }}" class="add-form">
@@ -165,60 +171,76 @@
                         {% if today_schedule %}
                         <ul class="today-schedule">
                             {% for item in today_schedule %}
-                            <li>
+                            <li class="{% if session.get('completed_tasks', {}).get(item.day|string + '_' + item.time_slot|string) %}completed weekly-task{% endif %}">
                                 <div>
                                     <span class="schedule-time">{{ item.time_slot }}</span>
                                     <div class="schedule-subject">{{ item.subject_name }}</div>
                                     {% if item.task_description %}
-                                    <small style="color: #666; font-size: 0.8rem; margin-top: 3px; display: block;">
+                                    <small class="task-description-small">
                                         {{ item.task_description }}
                                     </small>
                                     {% endif %}
-                                    <small style="color: #888; font-size: 0.75rem;">{{ item.subject_code }}</small>
+                                    <small class="subject-code-small">{{ item.subject_code }}</small>
                                 </div>
+                                <form method="POST" action="{{ url_for('complete_task') }}" class="complete-form">
+                                    <input type="hidden" name="day" value="{{ item.day }}">
+                                    <input type="hidden" name="time_slot" value="{{ item.time_slot }}">
+                                    <input type="hidden" name="subject_id" value="{{ item.subject_id }}">
+                                    {% if session.get('completed_tasks', {}).get(item.day|string + '_' + item.time_slot|string) %}
+                                    <button type="button" class="complete-btn completed" disabled title="Task completed">
+                                        ✓
+                                    </button>
+                                    {% else %}
+                                    <button type="submit" class="complete-btn" title="Mark as done">
+                                        ✓
+                                    </button>
+                                    {% endif %}
+                                </form>
                             </li>
                             {% endfor %}
                         </ul>
                         {% else %}
-                        <p style="color: #666; font-style: italic; padding: 10px 0;">No tasks scheduled for today</p>
+                        <p class="no-tasks-message">No tasks scheduled for today</p>
                         {% endif %}
 
-                        <h3 style="margin-top: 25px;">Week Overview</h3>
+                        <h3 class="week-overview-title">Week Overview</h3>
                         {% if weekly_summary %}
                         <ul class="today-schedule">
                             {% for item in weekly_summary %}
-                            <li>
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                                    <div style="flex-grow: 1;">
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <span class="schedule-time">{{ ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][item.day] }}</span>
-                                            <span style="margin: 0 5px;">-</span>
-                                            <span class="schedule-time">{{ item.time_slot }}</span>
-                                        </div>
-                                        <div class="schedule-subject">{{ item.subject_name }}</div>
-                                        {% if item.task_description %}
-                                        <small style="color: #666; font-size: 0.8rem; margin-top: 3px; display: block;">
-                                            {{ item.task_description }}
-                                        </small>
-                                        {% endif %}
-                                        <small style="color: #888; font-size: 0.75rem;">{{ item.subject_code }}</small>
+                            <li class="{% if session.get('completed_tasks', {}).get(item.day|string + '_' + item.time_slot|string) %}completed weekly-task{% endif %}">
+                                <div class="week-task-content">
+                                    <div class="week-time-row">
+                                        <span class="schedule-time">{{ ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][item.day] }}</span>
+                                        <span class="time-separator">-</span>
+                                        <span class="schedule-time">{{ item.time_slot }}</span>
                                     </div>
-                                    <!-- Green tick button -->
-                                    <form method="POST" action="{{ url_for('complete_task') }}" class="complete-form" 
-                                          style="margin-left: 10px;">
-                                        <input type="hidden" name="day" value="{{ item.day }}">
-                                        <input type="hidden" name="time_slot" value="{{ item.time_slot }}">
-                                        <input type="hidden" name="subject_id" value="{{ item.subject_id }}">
-                                        <button type="submit" class="complete-btn" title="Mark as done">
-                                            ✓
-                                        </button>
-                                    </form>
+                                    <div class="schedule-subject">{{ item.subject_name }}</div>
+                                    {% if item.task_description %}
+                                    <small class="task-description-small">
+                                        {{ item.task_description }}
+                                    </small>
+                                    {% endif %}
+                                    <small class="subject-code-small">{{ item.subject_code }}</small>
                                 </div>
+                                <form method="POST" action="{{ url_for('complete_task') }}" class="complete-form">
+                                    <input type="hidden" name="day" value="{{ item.day }}">
+                                    <input type="hidden" name="time_slot" value="{{ item.time_slot }}">
+                                    <input type="hidden" name="subject_id" value="{{ item.subject_id }}">
+                                    {% if completed_tasks.get(day|string + '_' + time_slot|string) %}
+                                    <button type="button" class="complete-btn completed" disabled title="Task completed">
+                                        ✓
+                                    </button>
+                                    {% else %}
+                                    <button type="submit" class="complete-btn" title="Mark as done">
+                                        ✓
+                                    </button>
+                                    {% endif %}
+                                </form>
                             </li>
                             {% endfor %}
                         </ul>
                         {% else %}
-                        <p style="color: #666; font-style: italic; padding: 10px 0;">No tasks scheduled this week</p>
+                        <p class="no-tasks-message">No tasks scheduled this week</p>
                         {% endif %}
                     </div>
                 </aside>

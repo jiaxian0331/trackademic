@@ -1887,9 +1887,12 @@ def timetable():
     
     conn.close()
     
+    # Get completed tasks from session
+    completed_tasks = session.get('completed_tasks', {})
+    
     return render_template('timetable.html', schedule=schedule, edit_mode=False, 
                           today_schedule=today_schedule, weekly_summary=weekly_summary,
-                          app_mode='trackademic')
+                          completed_tasks=completed_tasks, app_mode='trackademic')
 
 @app.route('/trackademic/add_subject_form')
 def add_subject_form():
@@ -2117,10 +2120,14 @@ def edit_timetable():
     weekly_summary = get_weekly_summary(user_id)
     
     conn.close()
+    
+    # Get completed tasks from session
+    completed_tasks = session.get('completed_tasks', {})
 
     return render_template('timetable.html', subjects=subjects, schedule=schedule, 
                           edit_mode=True, today_schedule=today_schedule, 
-                          weekly_summary=weekly_summary, app_mode='trackademic')
+                          weekly_summary=weekly_summary, completed_tasks=completed_tasks,
+                          app_mode='trackademic')
 
 def is_valid_time_range(start_time_str, end_time_str):
     """Helper function to validate if end time is after start time"""
@@ -2220,7 +2227,7 @@ def clear_timetable():
     
 @app.route('/trackademic/complete_task', methods=['POST'])
 def complete_task():
-    """Mark a task as completed and remove it from timetable"""
+    """Mark a task as completed (without removing it from database)"""
     if 'user_id' not in session:
         return redirect('/login')
     
@@ -2230,44 +2237,34 @@ def complete_task():
         time_slot = request.form.get('time_slot', '')
         subject_id = request.form.get('subject_id', '')
         
-        conn = get_db_connection()
+        # Initialize completed_tasks in session if not exists
+        if 'completed_tasks' not in session:
+            session['completed_tasks'] = {}
         
-        # First, check if this is a custom task (subject_code starts with CUSTOM_)
-        # AND belongs to the current user
-        subject = conn.execute('''
-            SELECT s.subject_code 
-            FROM subjects s 
-            JOIN timetable t ON s.subject_id = t.subject_id
-            WHERE s.subject_id = ? AND t.user_id = ?
-        ''', (subject_id, user_id)).fetchone()
+        # Create a unique key for this task
+        task_key = f"{day}_{time_slot}"
         
-        if subject and subject['subject_code'].startswith('CUSTOM_'):
-            # Delete the custom subject from subjects table
-            # Only if no other user is using it
-            other_users = conn.execute(
-                'SELECT COUNT(*) FROM timetable WHERE subject_id = ? AND user_id != ?',
-                (subject_id, user_id)
-            ).fetchone()[0]
-            
-            if other_users == 0:
-                conn.execute(
-                    'DELETE FROM subjects WHERE subject_id = ?',
-                    (subject_id,)
-                )
+        # Toggle completion status
+        if task_key in session['completed_tasks']:
+            # If already completed, mark as incomplete
+            session['completed_tasks'].pop(task_key)
+        else:
+            # Mark as completed
+            session['completed_tasks'][task_key] = {
+                'day': day,
+                'time_slot': time_slot,
+                'subject_id': subject_id,
+                'completed_at': datetime.datetime.now().isoformat()
+            }
         
-        # Delete from timetable - only user's own entry
-        conn.execute(
-            'DELETE FROM timetable WHERE user_id = ? AND day = ? AND time_slot = ?',
-            (user_id, day, time_slot)
-        )
-        
-        conn.commit()
-        conn.close()
+        # Save the session
+        session.modified = True
         
         return redirect('/trackademic/timetable')
     
     except Exception as e:
-        return f'<h1>Error completing task: {str(e)}</h1><p><a href="/trackademic/timetable">Go back</a></p>'
+        flash(f'Error completing task: {str(e)}', 'error')
+        return redirect('/trackademic/timetable')
 
 # ============ HELPER FUNCTIONS FOR TRACKADEMIC ============
 def get_today_schedule(user_id):
@@ -2276,7 +2273,7 @@ def get_today_schedule(user_id):
     
     conn = get_db_connection()
     today_schedule = conn.execute('''
-        SELECT t.time_slot, s.subject_name, s.subject_code, t.task_description, s.subject_id
+        SELECT t.day, t.time_slot, s.subject_name, s.subject_code, t.task_description, s.subject_id
         FROM timetable t 
         JOIN subjects s ON t.subject_id = s.subject_id
         WHERE t.user_id = ? AND t.day = ?
@@ -2302,7 +2299,7 @@ def get_weekly_summary(user_id):
         FROM timetable t 
         JOIN subjects s ON t.subject_id = s.subject_id
         WHERE t.user_id = ?
-        GROUP BY t.day, s.subject_name, t.time_slot
+        GROUP BY t.day, s.subject_name, t.time_slot, s.subject_code, s.subject_id, t.task_description
         ORDER BY t.day, t.time_slot
     ''', (user_id,)).fetchall()
     
