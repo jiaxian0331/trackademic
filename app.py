@@ -28,11 +28,9 @@ def get_social_db_connection():
 def init_databases():
     """Initialize both databases"""
     
-    # Initialize Trackademic Database
     conn = get_db_connection('trackademic.db')
     cursor = conn.cursor()
     
-    # Trackademic tables
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS subjects (
         subject_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -95,7 +93,6 @@ def init_databases():
     conn.commit()
     conn.close()
     
-    # Initialize Social Database
     db = get_social_db_connection()
     db.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -149,13 +146,11 @@ def init_databases():
     db.commit()
     db.close()
     
-    # Check if admin exists, if not create one
     create_admin_user()
 
 def create_admin_user():
     """Create admin user if it doesn't exist"""
     try:
-        # Check trackademic database
         conn = get_db_connection()
         admin = conn.execute(
             "SELECT * FROM trackademic_users WHERE email = ?", 
@@ -171,7 +166,6 @@ def create_admin_user():
         
         conn.close()
         
-        # Check social database
         db = get_social_db_connection()
         social_admin = db.execute(
             "SELECT * FROM users WHERE email = ?", 
@@ -192,7 +186,7 @@ def create_admin_user():
 
 init_databases()
 
-# ============ API ENDPOINTS ============
+# API ENDPOINTS
 @app.route('/api/subjects', methods=['GET'])
 def api_get_subjects():
     """API endpoint to get all subjects for the calculator"""
@@ -212,7 +206,6 @@ def api_get_subjects():
         
         conn.close()
         
-        # Convert to list of dictionaries
         subjects_list = []
         for subject in subjects:
             subjects_list.append({
@@ -243,18 +236,14 @@ def api_save_trimester():
         if not data:
             return jsonify({'success': False, 'error': 'No data provided'}), 400
         
-        # Get the current session user_id (from social database)
         social_user_id = session['user_id']
         
-        # First, check if user exists in trackademic_users
         conn = get_db_connection()
         if not conn:
             return jsonify({'success': False, 'error': 'Database connection failed'}), 500
         
-        # Try to find trackademic user by email first (most reliable)
         trackademic_user_id = None
         
-        # Get user info from social database to find by email
         social_db = get_social_db_connection()
         social_user = social_db.execute(
             'SELECT username, email FROM users WHERE id = ?',
@@ -263,7 +252,6 @@ def api_save_trimester():
         social_db.close()
         
         if social_user:
-            # Try to find trackademic user by email
             track_user = conn.execute(
                 'SELECT user_id FROM trackademic_users WHERE email = ?',
                 (social_user['email'],)
@@ -273,7 +261,6 @@ def api_save_trimester():
                 trackademic_user_id = track_user['user_id']
                 print(f"Found trackademic user by email: {trackademic_user_id}")
         
-        # If not found by email, try to find by username
         if not trackademic_user_id and social_user:
             track_user = conn.execute(
                 'SELECT user_id FROM trackademic_users WHERE username = ?',
@@ -284,7 +271,6 @@ def api_save_trimester():
                 trackademic_user_id = track_user['user_id']
                 print(f"Found trackademic user by username: {trackademic_user_id}")
         
-        # If still not found, create a new trackademic user
         if not trackademic_user_id and social_user:
             try:
                 cursor = conn.execute(
@@ -295,10 +281,9 @@ def api_save_trimester():
                 trackademic_user_id = cursor.lastrowid
                 print(f"Created new trackademic user: {trackademic_user_id}")
                 
-                # Store in session for future use
                 session['trackademic_user_id'] = trackademic_user_id
             except sqlite3.IntegrityError as e:
-                # User might have been created by another process
+
                 track_user = conn.execute(
                     'SELECT user_id FROM trackademic_users WHERE email = ?',
                     (social_user['email'],)
@@ -320,16 +305,13 @@ def api_save_trimester():
                 'error': 'Could not find or create trackademic user record'
             }), 404
         
-        # Now use the trackademic_user_id to save GPA data
         user_id = trackademic_user_id
         
-        # Validate required fields
         trimester_name = data.get('trimester', 'Trimester 1')
         gpa_value = float(data.get('gpa', 0.0))
         total_credits = int(data.get('total_credits', 0))
         total_grade_points = float(data.get('total_grade_points', 0.0))
         
-        # Validate GPA range
         if not (0.0 <= gpa_value <= 4.0):
             conn.close()
             return jsonify({
@@ -337,14 +319,12 @@ def api_save_trimester():
                 'error': 'GPA must be between 0.0 and 4.0'
             }), 400
         
-        # Check if trimester already exists for this user
         existing = conn.execute(
             'SELECT * FROM gpa WHERE user_id = ? AND trimester = ?', 
             (user_id, trimester_name)
         ).fetchone()
         
         if existing:
-            # Update existing record
             conn.execute(
                 '''UPDATE gpa 
                    SET gpa = ?, total_credits = ?, total_grade_points = ?, created_at = CURRENT_TIMESTAMP
@@ -353,7 +333,6 @@ def api_save_trimester():
             )
             action = 'updated'
         else:
-            # Insert new record
             conn.execute(
                 '''INSERT INTO gpa 
                    (user_id, trimester, gpa, total_credits, total_grade_points) 
@@ -364,7 +343,6 @@ def api_save_trimester():
         
         conn.commit()
         
-        # Verify the save was successful
         saved = conn.execute(
             'SELECT * FROM gpa WHERE user_id = ? AND trimester = ?', 
             (user_id, trimester_name)
@@ -391,7 +369,6 @@ def api_save_trimester():
             }), 500
             
     except Exception as e:
-        # Log the full error for debugging
         print(f"Error in api_save_trimester: {str(e)}")
         import traceback
         traceback.print_exc()
@@ -408,11 +385,9 @@ def api_get_cgpa_history():
         if 'user_id' not in session:
             return jsonify({'success': False, 'error': 'Not authenticated'}), 401
         
-        # Get trackademic user ID
         social_user_id = session['user_id']
         conn = get_db_connection()
         
-        # Find trackademic user by email from social database
         social_db = get_social_db_connection()
         social_user = social_db.execute(
             'SELECT email FROM users WHERE id = ?',
@@ -437,7 +412,6 @@ def api_get_cgpa_history():
                 'message': 'No GPA data found for user'
             })
         
-        # Get GPA data for the trackademic user
         gpa_data = conn.execute('''
             SELECT gpa_id as id, 
                    trimester, 
@@ -452,7 +426,6 @@ def api_get_cgpa_history():
         
         conn.close()
         
-        # Convert to list of dictionaries
         history_list = []
         for item in gpa_data:
             history_list.append({
@@ -474,12 +447,11 @@ def api_get_cgpa_history():
             'error': str(e)
         }), 500
     
-# ============ COMMON ROUTES ============
+# COMMON ROUTES
 @app.route('/')
 def home():
     """Main landing page"""
     if 'user_id' in session:
-        # Check if user is admin
         if 'is_admin' in session and session['is_admin'] == 1:
             return redirect('/admin/home')
         elif 'app_mode' in session and session['app_mode'] == 'social':
@@ -500,7 +472,7 @@ def set_app_mode(mode):
     else:
         return redirect('/trackademic')
 
-# ============ AUTHENTICATION ROUTES ============
+# AUTHENTICATION ROUTES
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     """Unified login page"""
@@ -509,9 +481,7 @@ def login():
         password = request.form['password']
         app_choice = request.form.get('app_choice', 'trackademic')
         
-        # Check if this is admin login
         if email == 'admin@login.com':
-            # Try social database first
             db = get_social_db_connection()
             cursor = db.execute("SELECT * FROM users WHERE email=? AND password=?", (email, password))
             user = cursor.fetchone()
@@ -521,13 +491,12 @@ def login():
                 session['user_id'] = user['id']
                 session['username'] = user['username']
                 session['app_mode'] = app_choice
-                session['is_admin'] = 1  # Mark as admin
-                # NEW: Store trackademic user ID and email
+                session['is_admin'] = 1  
+
                 session['trackademic_user_id'] = user['id']
                 session['email'] = email
                 return redirect('/admin/home')
             
-            # Try trackademic database
             conn = get_db_connection()
             track_user = conn.execute(
                 "SELECT * FROM trackademic_users WHERE email=? AND password=?",
@@ -539,14 +508,12 @@ def login():
                 session['user_id'] = track_user['user_id']
                 session['username'] = track_user['username']
                 session['app_mode'] = app_choice
-                session['is_admin'] = 1  # Mark as admin
-                # NEW: Store trackademic user ID and email
+                session['is_admin'] = 1  
                 session['trackademic_user_id'] = track_user['user_id']
                 session['email'] = email
                 return redirect('/admin/home')
         
         # Regular user login
-        # Try social database first
         db = get_social_db_connection()
         cursor = db.execute("SELECT * FROM users WHERE email=? AND password=?", (email, password))
         user = cursor.fetchone()
@@ -556,9 +523,8 @@ def login():
             session['user_id'] = user['id']
             session['username'] = user['username']
             session['app_mode'] = app_choice
-            session['is_admin'] = 0  # Regular user
+            session['is_admin'] = 0  
             
-            # NEW: Store trackademic user ID and email in session
             conn = get_db_connection()
             track_user = conn.execute(
                 "SELECT user_id FROM trackademic_users WHERE email=?",
@@ -568,16 +534,14 @@ def login():
             
             if track_user:
                 session['trackademic_user_id'] = track_user['user_id']
-                session['email'] = email  # Store email for GPA lookups
+                session['email'] = email  
             else:
-                # If not found, use social user ID as fallback
                 session['trackademic_user_id'] = user['id']
                 session['email'] = email
             
             if app_choice == 'social':
                 return redirect('/social/dashboard')
             else:
-                # Also check trackademic user table
                 conn = get_db_connection()
                 track_user = conn.execute(
                     "SELECT * FROM trackademic_users WHERE email=? AND password=?",
@@ -586,7 +550,6 @@ def login():
                 conn.close()
                 
                 if not track_user:
-                    # Create trackademic user record if it doesn't exist
                     conn = get_db_connection()
                     conn.execute(
                         "INSERT OR IGNORE INTO trackademic_users (username, email, password) VALUES (?, ?, ?)",
@@ -609,14 +572,12 @@ def login():
             session['user_id'] = track_user['user_id']
             session['username'] = track_user['username']
             session['app_mode'] = app_choice
-            session['is_admin'] = 0  # Regular user
+            session['is_admin'] = 0 
             
-            # NEW: Store trackademic user ID and email
             session['trackademic_user_id'] = track_user['user_id']
             session['email'] = email
             
             if app_choice == 'social':
-                # Create social user record if it doesn't exist
                 db = get_social_db_connection()
                 db.execute(
                     "INSERT OR IGNORE INTO users (username, email, password) VALUES (?, ?, ?)",
@@ -641,11 +602,9 @@ def signup():
         password = request.form['password']
         confirm_password = request.form.get('confirm_password', '')
         
-        # Add password confirmation check
         if password != confirm_password:
             return render_template('signup.html', error="Passwords do not match.")
         
-        # Prevent using admin email
         if email == 'admin@login.com':
             return render_template('signup.html', error="This email is reserved for admin.")
         
@@ -653,47 +612,39 @@ def signup():
         social_db = None
         
         try:
-            # Create user in trackademic database
-            trackademic_conn = get_db_connection()  # trackademic.db
+            trackademic_conn = get_db_connection()  
             trackademic_conn.execute(
                 "INSERT INTO trackademic_users (username, email, password, is_admin) VALUES (?, ?, ?, 0)",
                 (username, email, password)
             )
             trackademic_conn.commit()
             
-            # Get the trackademic user ID
             track_user = trackademic_conn.execute(
                 "SELECT user_id FROM trackademic_users WHERE email=?",
                 (email,)
             ).fetchone()
             trackademic_user_id = track_user['user_id']
             
-            # Create user in social database
-            social_db = get_social_db_connection()  # social.db
+            social_db = get_social_db_connection() 
             social_db.execute(
                 "INSERT INTO users (username, email, password, is_admin) VALUES (?, ?, ?, 0)",
                 (username, email, password)
             )
             social_db.commit()
             
-            # Get user ID from social DB
             cursor = social_db.execute("SELECT * FROM users WHERE email=?", (email,))
             user = cursor.fetchone()
             
             if not user:
                 return render_template('signup.html', error="Error creating account. Please try again.")
             
-            # Set session variables
             session['user_id'] = user['id']
             session['username'] = username
-            session['app_mode'] = 'trackademic'  # Default to trackademic
-            session['is_admin'] = 0  # Regular user
-            
-            # NEW: Store trackademic user ID and email in session
+            session['app_mode'] = 'trackademic' 
+            session['is_admin'] = 0  
             session['trackademic_user_id'] = trackademic_user_id
             session['email'] = email
             
-            # Redirect to trackademic by default
             return redirect('/trackademic')
                 
         except sqlite3.IntegrityError:
@@ -702,7 +653,6 @@ def signup():
             print(f"Signup error: {e}")
             return render_template('signup.html', error=f"Error creating account: {str(e)}")
         finally:
-            # Ensure connections are closed
             if trackademic_conn:
                 trackademic_conn.close()
             if social_db:
@@ -716,7 +666,7 @@ def logout():
     session.clear()
     return redirect('/login')
 
-# ============ ADMIN HOME PAGE ============
+# ADMIN HOME PAGE
 @app.route('/admin/home')
 def admin_home():
     """Admin-only home page"""
@@ -858,7 +808,6 @@ def trackademic_home():
     if 'user_id' not in session:
         return redirect('/login')
     
-    # If admin, redirect to admin home
     if 'is_admin' in session and session['is_admin'] == 1:
         return redirect('/admin/home')
     
@@ -913,10 +862,9 @@ def trackademic_home():
     </html>
     '''
 
-# ============ TRACKADEMIC SUBJECT ROUTES ============
+# TRACKADEMIC SUBJECT ROUTES
 @app.route('/trackademic/subjects')
 def list_subjects():
-    # Check if user is admin
     if 'is_admin' not in session or session['is_admin'] != 1:
         return redirect('/trackademic')
     
@@ -953,7 +901,6 @@ def list_subjects():
 
 @app.route('/trackademic/add-subject-form-db', methods=['GET', 'POST'])
 def add_subject_form_db():
-    # Check if user is admin
     if 'is_admin' not in session or session['is_admin'] != 1:
         return redirect('/trackademic')
     
@@ -998,7 +945,6 @@ def add_subject_form_db():
 
 @app.route('/trackademic/edit-subject/<int:subject_id>', methods=['GET', 'POST'])
 def edit_subject(subject_id):
-    # Check if user is admin
     if 'is_admin' not in session or session['is_admin'] != 1:
         return redirect('/trackademic')
     
@@ -1051,7 +997,6 @@ def edit_subject(subject_id):
 
 @app.route('/trackademic/delete-subject/<int:subject_id>')
 def delete_subject(subject_id):
-    # Check if user is admin
     if 'is_admin' not in session or session['is_admin'] != 1:
         return redirect('/trackademic')
     
@@ -1064,10 +1009,9 @@ def delete_subject(subject_id):
     except Exception as e:
         return f'<h1>Error deleting subject!</h1><p><a href="/trackademic/subjects">Back to subjects</a></p>'
 
-# ============ TRACKADEMIC USER ROUTES ============
+# TRACKADEMIC USER ROUTES
 @app.route('/trackademic/user')
 def list_user():
-    # Check if user is admin
     if 'is_admin' not in session or session['is_admin'] != 1:
         return redirect('/trackademic')
     
@@ -1103,7 +1047,6 @@ def list_user():
 
 @app.route('/trackademic/delete-user/<int:user_id>')
 def delete_user(user_id):
-    # Check if user is admin
     if 'is_admin' not in session or session['is_admin'] != 1:
         return redirect('/trackademic')
     
@@ -1116,7 +1059,7 @@ def delete_user(user_id):
     except Exception as e:
         return f'<h1>Error deleting user! {str(e)}</h1><p><a href="/trackademic/user">Back to users</a></p>'
 
-# ============ CALCULATOR HELPER FUNCTIONS ============
+# CALCULATOR HELPER FUNCTIONS
 def calculate_gpa_server(subjects):
     """Server-side GPA calculation"""
     GRADE_SCALE = {
@@ -1179,7 +1122,7 @@ def calculate_cgpa_server(history):
     cgpa = total_cumulative_grade_points / total_cumulative_credits if total_cumulative_credits > 0 else 0
     return cgpa
 
-# ============ CALCULATOR ROUTE ============
+# CALCULATOR ROUTE
 @app.route('/trackademic/calculator', methods=['GET', 'POST'])
 def calculator():
     """Trackademic GPA Calculator - Server-side version"""
@@ -1188,37 +1131,26 @@ def calculator():
     
     user_id = session['user_id']
     
-    # Make session variables user-specific
     current_trimester_key = f'calculator_current_trimester_{user_id}'
     current_subjects_key = f'calculator_current_subjects_{user_id}'
     
-    # Check if we need to clear old session data from other users
     for key in list(session.keys()):
         if key.startswith('calculator_') and not key.endswith(str(user_id)):
-            # This is session data from a different user, remove it
             session.pop(key, None)
     
-    # Initialize session variables if they don't exist
     if current_trimester_key not in session:
         session[current_trimester_key] = 1
     if current_subjects_key not in session:
         session[current_subjects_key] = []
     
-    # REMOVE: Session-based CGPA history storage
-    # We'll load from database instead
-
-    # Get current state from session
     current_trimester = session.get(current_trimester_key, 1)
     current_subjects = session.get(current_subjects_key, [])
     
-    # NEW: Load CGPA history from database instead of session
     cgpa_history = []
     try:
-        # Find trackademic user ID
         social_user_id = session['user_id']
         conn = get_db_connection()
         
-        # Get user info from social database
         social_db = get_social_db_connection()
         social_user = social_db.execute(
             'SELECT email FROM users WHERE id = ?',
@@ -1227,7 +1159,6 @@ def calculator():
         social_db.close()
         
         if social_user:
-            # Find trackademic user by email
             track_user = conn.execute(
                 'SELECT user_id FROM trackademic_users WHERE email = ?',
                 (social_user['email'],)
@@ -1236,7 +1167,6 @@ def calculator():
             if track_user:
                 trackademic_user_id = track_user['user_id']
                 
-                # Get GPA history from database
                 gpa_records = conn.execute('''
                     SELECT gpa_id as id, 
                            trimester, 
@@ -1249,9 +1179,7 @@ def calculator():
                     ORDER BY trimester
                 ''', (trackademic_user_id,)).fetchall()
                 
-                # Convert database records to CGPA history format
                 for record in gpa_records:
-                    # Extract trimester number from trimester name
                     trimester_name = record['trimester']
                     trimester_number = 1
                     if ' ' in trimester_name:
@@ -1267,14 +1195,13 @@ def calculator():
                         'gpa': float(record['gpa']),
                         'total_credits': record['total_credits'] or 0,
                         'total_grade_points': record['total_grade_points'] or 0,
-                        'subjects': []  # Subjects not stored in database, but we don't need them for display
+                        'subjects': []  
                     })
         
         conn.close()
     except Exception as e:
         print(f"Error loading CGPA history from database: {e}")
     
-    # Grade scale for template
     GRADE_SCALE = {
         'A+': 4.00,
         'A': 4.00,
@@ -1290,7 +1217,6 @@ def calculator():
         'F': 0.00
     }
     
-    # Handle POST requests
     if request.method == 'POST':
         action = request.form.get('action')
         
@@ -1307,7 +1233,6 @@ def calculator():
             subject_id = request.form.get('subject_to_add')
             if subject_id:
                 subject_id = int(subject_id)
-                # Get all subjects from database
                 conn = get_db_connection()
                 subject_data = conn.execute('''
                     SELECT subject_id as id, 
@@ -1320,7 +1245,6 @@ def calculator():
                 conn.close()
                 
                 if subject_data:
-                    # Check if subject already exists in current trimester
                     existing_ids = [s['id'] for s in current_subjects]
                     if subject_id not in existing_ids:
                         subject_with_grade = {
@@ -1347,7 +1271,6 @@ def calculator():
                 subject_id = int(action.split('_')[-1])
                 grade = request.form.get(f'grade_{subject_id}', '')
                 
-                # Update the grade in current_subjects
                 for subject in current_subjects:
                     if subject['id'] == subject_id:
                         subject['grade'] = grade
@@ -1357,12 +1280,9 @@ def calculator():
                 pass
         
         elif action == 'save_trimester':
-            # Calculate current GPA
             current_gpa_data = calculate_gpa_server(current_subjects)
 
-            # Check if all subjects have grades
             if current_gpa_data['subjects_without_grades'] == 0 and current_subjects:
-                # Prepare semester data
                 semester_data = {
                     'semester': f'Trimester {current_trimester}',
                     'trimester_number': current_trimester,
@@ -1373,19 +1293,15 @@ def calculator():
                     'subjects': current_subjects.copy()
                 }
         
-                # Also save to database with user_id
                 try:
-                    # Get the correct user_id for trackademic database
                     conn = get_db_connection()
     
-                    # First, check if user exists in trackademic_users
                     trackademic_user = conn.execute(
                         'SELECT user_id FROM trackademic_users WHERE email = ?',
                         (session.get('email', ''),)
                     ).fetchone()
     
                     if not trackademic_user:
-                        # Try to find by username
                         trackademic_user = conn.execute(
                             'SELECT user_id FROM trackademic_users WHERE username = ?',
                             (session.get('username', ''),)
@@ -1394,8 +1310,6 @@ def calculator():
                     if trackademic_user:
                         user_id = trackademic_user['user_id']
                     else:
-                        # Create a new trackademic user entry
-                        # Get user info from social database if available
                         social_db = get_social_db_connection()
                         social_user = social_db.execute(
                             'SELECT username, email FROM users WHERE id = ?',
@@ -1411,7 +1325,6 @@ def calculator():
                             conn.commit()
                             user_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
                         else:
-                            # Fallback - create with session data
                             conn.execute(
                                 'INSERT INTO trackademic_users (username, email, password, is_admin) VALUES (?, ?, ?, ?)',
                                 (session['username'], f"{session['username']}@example.com", 'default_password', 0)
@@ -1419,17 +1332,14 @@ def calculator():
                             conn.commit()
                             user_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
 
-                    # Now save the GPA data with the correct user_id
                     trimester_name = f'Trimester {current_trimester}'
 
-                    # Check if trimester already exists for this user
                     existing = conn.execute(
                         'SELECT * FROM gpa WHERE user_id = ? AND trimester = ?',
                         (user_id, trimester_name)
                     ).fetchone()
 
                     if existing:
-                        # Update existing
                         conn.execute(
                             '''UPDATE gpa 
                                SET gpa = ?, total_credits = ?, total_grade_points = ?, created_at = CURRENT_TIMESTAMP 
@@ -1439,7 +1349,6 @@ def calculator():
                         )
                         action_msg = 'updated'
                     else:
-                        # Insert new
                         conn.execute(
                             '''INSERT INTO gpa (user_id, trimester, gpa, total_credits, total_grade_points) 
                                VALUES (?, ?, ?, ?, ?)''',
@@ -1451,8 +1360,6 @@ def calculator():
                     conn.commit()
                     print(f"GPA saved for user_id={user_id}, trimester={trimester_name}, GPA={current_gpa_data['gpa']:.2f}")
 
-                    # Reload CGPA history from database after saving
-                    # Get updated history
                     gpa_records = conn.execute('''
                         SELECT gpa_id as id, 
                                trimester, 
@@ -1465,7 +1372,6 @@ def calculator():
                         ORDER BY trimester
                     ''', (user_id,)).fetchall()
                     
-                    # Update cgpa_history with fresh data from database
                     cgpa_history.clear()
                     for record in gpa_records:
                         trimester_name = record['trimester']
@@ -1495,9 +1401,7 @@ def calculator():
                     if 'conn' in locals():
                         conn.close()
 
-                # Only reset and advance if save was successful
                 if action_msg in ['saved', 'updated']:
-                    # Reset current trimester and advance to next
                     session[current_subjects_key] = []
                     if current_trimester < 6:
                         session[current_trimester_key] = current_trimester + 1
@@ -1514,13 +1418,10 @@ def calculator():
             session[current_subjects_key] = []
         
         elif action == 'clear_history':
-            # NEW: Clear history from database instead of session
             try:
-                # Find trackademic user ID
                 social_user_id = session['user_id']
                 conn = get_db_connection()
                 
-                # Get user info from social database
                 social_db = get_social_db_connection()
                 social_user = social_db.execute(
                     'SELECT email FROM users WHERE id = ?',
@@ -1529,14 +1430,12 @@ def calculator():
                 social_db.close()
                 
                 if social_user:
-                    # Find trackademic user by email
                     track_user = conn.execute(
                         'SELECT user_id FROM trackademic_users WHERE email = ?',
                         (social_user['email'],)
                     ).fetchone()
                     
                     if track_user:
-                        # Delete all GPA records for this user
                         conn.execute(
                             'DELETE FROM gpa WHERE user_id = ?',
                             (track_user['user_id'],)
@@ -1544,7 +1443,7 @@ def calculator():
                         conn.commit()
                         
                 conn.close()
-                cgpa_history = []  # Clear local history
+                cgpa_history = []  
                 flash('All CGPA history has been cleared.', 'success')
             except Exception as e:
                 print(f"Error clearing history from database: {e}")
@@ -1553,13 +1452,10 @@ def calculator():
         elif action.startswith('remove_history_'):
             try:
                 trimester_number = int(action.split('_')[-1])
-                # NEW: Remove from database instead of session
                 try:
-                    # Find trackademic user ID
                     social_user_id = session['user_id']
                     conn = get_db_connection()
                     
-                    # Get user info from social database
                     social_db = get_social_db_connection()
                     social_user = social_db.execute(
                         'SELECT email FROM users WHERE id = ?',
@@ -1568,14 +1464,12 @@ def calculator():
                     social_db.close()
                     
                     if social_user:
-                        # Find trackademic user by email
                         track_user = conn.execute(
                             'SELECT user_id FROM trackademic_users WHERE email = ?',
                             (social_user['email'],)
                         ).fetchone()
                         
                         if track_user:
-                            # Delete specific trimester
                             trimester_name = f'Trimester {trimester_number}'
                             conn.execute(
                                 'DELETE FROM gpa WHERE user_id = ? AND trimester = ?',
@@ -1583,7 +1477,6 @@ def calculator():
                             )
                             conn.commit()
                             
-                            # Update local history
                             cgpa_history = [s for s in cgpa_history if s['trimester_number'] != trimester_number]
                     
                     conn.close()
@@ -1594,11 +1487,9 @@ def calculator():
             except (IndexError, ValueError):
                 pass
         
-        # Refresh current values after POST (except CGPA history which comes from DB)
         current_trimester = session.get(current_trimester_key, 1)
         current_subjects = session.get(current_subjects_key, [])
     
-    # Get all subjects from database for the dropdown
     conn = get_db_connection()
     all_subjects = conn.execute('''
         SELECT subject_id as id, 
@@ -1610,13 +1501,10 @@ def calculator():
     ''').fetchall()
     conn.close()
     
-    # Calculate current GPA
     current_gpa_data = calculate_gpa_server(current_subjects)
     
-    # Calculate overall CGPA from database history
     overall_cgpa = calculate_cgpa_server(cgpa_history)
     
-    # Render the calculator template with all data
     return render_template('Calculator.html',
                          all_subjects=all_subjects,
                          current_trimester=current_trimester,
@@ -1627,16 +1515,14 @@ def calculator():
                          overall_cgpa=overall_cgpa,
                          app_mode='trackademic')
 
-# ============ TRACKADEMIC GPA ROUTES ============
+# TRACKADEMIC GPA ROUTES
 @app.route('/trackademic/gpa')
 def list_gpa():
-    # Check if user is admin
     if 'is_admin' not in session or session['is_admin'] != 1:
         return redirect('/trackademic')
     
     try:
         conn = get_db_connection()
-        # Get GPA data with usernames
         gpa_data = conn.execute('''
             SELECT g.*, u.username, u.email 
             FROM gpa g 
@@ -1675,7 +1561,6 @@ def list_gpa():
 
 @app.route('/trackademic/delete-gpa/<int:gpa_id>')
 def delete_gpa(gpa_id):
-    # Check if user is admin
     if 'is_admin' not in session or session['is_admin'] != 1:
         return redirect('/trackademic')
     
@@ -1688,21 +1573,18 @@ def delete_gpa(gpa_id):
     except Exception as e:
         return f'<h1>Error deleting GPA! {str(e)}</h1><p><a href="/trackademic/gpa">Back to GPA Data</a></p>'
 
-# ============ TRACKADEMIC DATABASE RESET ROUTES ============
+# TRACKADEMIC DATABASE RESET ROUTES
 @app.route('/trackademic/create-subjects-db')
 def create_subjects_database_route():
-    # Check if user is admin
     if 'is_admin' not in session or session['is_admin'] != 1:
         return redirect('/trackademic')
     
     try:
-        # Reset subjects table with sample data
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("PRAGMA foreign_keys = OFF")
         cursor.execute('DELETE FROM subjects')
         
-        # Add sample subjects from app (1).py
         subjects = [
             ('Introduction to Business Management', 'GNB1114', 4),
             ('Introduction to Computing Technologies', 'CCT1114', 4),
@@ -1738,18 +1620,15 @@ def create_subjects_database_route():
 
 @app.route('/trackademic/create-notes-db')
 def create_notes_database_route():
-    # Check if user is admin
     if 'is_admin' not in session or session['is_admin'] != 1:
         return redirect('/trackademic')
     
     try:
-        # Reset notes table with sample data
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("PRAGMA foreign_keys = OFF")
         cursor.execute('DELETE FROM notes')
         
-        # Add sample notes from app (1).py
         notes = [
             (1, 1, 'business_notes.pdf', None),
             (2, 1, 'computing_notes.pdf', None),
@@ -1773,7 +1652,6 @@ def create_notes_database_route():
 
 @app.route('/trackademic/create-gpa-db')
 def create_gpa_database_route():
-    # Check if user is admin
     if 'is_admin' not in session or session['is_admin'] != 1:
         return redirect('/trackademic')
     
@@ -1781,17 +1659,14 @@ def create_gpa_database_route():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Clear existing data but keep the table structure
         cursor.execute('DELETE FROM gpa')
         
-        # Get admin user ID to assign sample data
         cursor.execute("SELECT user_id FROM trackademic_users WHERE email='admin@login.com'")
         admin_result = cursor.fetchone()
         
         if admin_result:
             admin_id = admin_result[0]
             
-            # Add sample GPA data with admin user_id
             gpa_data = [
                 (admin_id, 'Sample', 3.75, 12, 45.0),
             ]
@@ -1813,12 +1688,10 @@ def create_gpa_database_route():
     
 @app.route('/trackademic/create-user-db')
 def create_user_database_route():
-    # Check if user is admin
     if 'is_admin' not in session or session['is_admin'] != 1:
         return redirect('/trackademic')
     
     try:
-        # Reset trackademic users table with sample data
         conn = get_db_connection()
         cursor = conn.cursor()
         current_user_id = session.get('user_id', None)
@@ -1826,7 +1699,6 @@ def create_user_database_route():
         cursor.execute('DELETE FROM trackademic_users')
         cursor.execute('DELETE FROM sqlite_sequence WHERE name="trackademic_users"')
         
-        # Add sample user from app (1).py
         user_data = [
             ('jiaxian0331', 'hoejiaxian@gmail.com', 'jiaxian0000', 0),
             ('admin', 'admin@login.com', 'admin3.142', 1)
@@ -1847,7 +1719,7 @@ def create_user_database_route():
     except Exception as e:
         return f'<h1>Error creating user database! {str(e)}</h1>'
 
-# ============ TRACKADEMIC TIMETABLE ROUTES ============
+# TRACKADEMIC TIMETABLE ROUTES
 @app.route('/trackademic/timetable')
 def timetable():
     """View timetable in non-edit mode"""
@@ -1879,15 +1751,11 @@ def timetable():
             'timetable_id': item['timetable_id']
         }
     
-    # Get today's schedule
     today_schedule = get_today_schedule(user_id)
-    
-    # Get weekly summary
     weekly_summary = get_weekly_summary(user_id)
     
     conn.close()
-    
-    # Get completed tasks from session
+
     completed_tasks = session.get('completed_tasks', {})
     
     return render_template('timetable.html', schedule=schedule, edit_mode=False, 
@@ -1919,7 +1787,7 @@ def add_subject_form():
 @app.route('/trackademic/add_timetable', methods=['POST'])
 def add_timetable():
     """Add a subject to the timetable database"""
-    if 'user_id' not in session:  # Only check if user is logged in
+    if 'user_id' not in session: 
         return redirect('/login')
     
     user_id = session['user_id']
@@ -1947,7 +1815,6 @@ def add_timetable():
                               task_description=task_description,
                               app_mode='trackademic')
     
-    # Validate that end time is not earlier than start time
     if not is_valid_time_range(start_time, end_time):
         error_message = f"End time ({end_time}) cannot be earlier than or equal to start time ({start_time})."
         conn = get_db_connection()
@@ -1965,7 +1832,6 @@ def add_timetable():
                               task_description=task_description,
                               app_mode='trackademic')
     
-    # Handle custom task
     if subject_id == 'custom':
         if not custom_task:
             error_message = "Please enter a task name for the custom task."
@@ -1984,7 +1850,6 @@ def add_timetable():
                                   task_description=task_description,
                                   app_mode='trackademic')
         
-        # Create a temporary subject for the custom task
         conn = get_db_connection()
         try:
             timestamp = int(time.time())
@@ -1996,7 +1861,6 @@ def add_timetable():
             )
             conn.commit()
             
-            # Get the new subject_id
             new_subject = conn.execute(
                 'SELECT subject_id FROM subjects WHERE subject_code = ?',
                 (custom_code,)
@@ -2022,13 +1886,11 @@ def add_timetable():
                                   app_mode='trackademic')
     else:
         subject_id = int(subject_id)
-        conn = get_db_connection()  # Get connection for regular subjects
+        conn = get_db_connection() 
     
-    # Combine start and end time into a single time slot string
     time_slot = f"{start_time} - {end_time}"
     
     try:
-        # Check if time slot is already taken
         existing = conn.execute(
             'SELECT * FROM timetable WHERE day = ? AND time_slot = ?',
             (day, time_slot)
@@ -2053,7 +1915,6 @@ def add_timetable():
                                   task_description=task_description,
                                   app_mode='trackademic')
         
-        # Insert into timetable WITH task_description
         conn.execute(
             'INSERT INTO timetable (subject_id, user_id, day, time_slot, task_description) VALUES (?, ?, ?, ?, ?)',
             (subject_id, user_id, day, time_slot, task_description)
@@ -2113,15 +1974,12 @@ def edit_timetable():
             'timetable_id': item['timetable_id']
         }
     
-    # Get today's schedule
     today_schedule = get_today_schedule(user_id)
     
-    # Get weekly summary
     weekly_summary = get_weekly_summary(user_id)
     
     conn.close()
     
-    # Get completed tasks from session
     completed_tasks = session.get('completed_tasks', {})
 
     return render_template('timetable.html', subjects=subjects, schedule=schedule, 
@@ -2135,7 +1993,6 @@ def is_valid_time_range(start_time_str, end_time_str):
         try:
             time_str = time_str.strip().upper()
             
-            # Check if AM/PM is present
             if " AM" in time_str:
                 time_part = time_str.replace(" AM", "")
                 is_pm = False
@@ -2143,11 +2000,9 @@ def is_valid_time_range(start_time_str, end_time_str):
                 time_part = time_str.replace(" PM", "")
                 is_pm = True
             else:
-                # Default to AM if no indicator
                 time_part = time_str
                 is_pm = False
             
-            # Handle case where time might have trailing spaces
             time_part = time_part.strip()
             
             if ":" in time_part:
@@ -2158,7 +2013,6 @@ def is_valid_time_range(start_time_str, end_time_str):
                 hours = int(time_part)
                 minutes = 0
             
-            # Convert 12-hour to 24-hour format
             if is_pm:
                 if hours != 12:
                     hours += 12
@@ -2169,7 +2023,7 @@ def is_valid_time_range(start_time_str, end_time_str):
             return hours * 60 + minutes
         except Exception as e:
             print(f"Error parsing time '{time_str}': {e}")
-            return -1  # Invalid time
+            return -1  
     
     try:
         start_minutes = time_to_minutes(start_time_str)
@@ -2237,19 +2091,14 @@ def complete_task():
         time_slot = request.form.get('time_slot', '')
         subject_id = request.form.get('subject_id', '')
         
-        # Initialize completed_tasks in session if not exists
         if 'completed_tasks' not in session:
             session['completed_tasks'] = {}
         
-        # Create a unique key for this task
         task_key = f"{day}_{time_slot}"
         
-        # Toggle completion status
         if task_key in session['completed_tasks']:
-            # If already completed, mark as incomplete
             session['completed_tasks'].pop(task_key)
         else:
-            # Mark as completed
             session['completed_tasks'][task_key] = {
                 'day': day,
                 'time_slot': time_slot,
@@ -2257,7 +2106,6 @@ def complete_task():
                 'completed_at': datetime.datetime.now().isoformat()
             }
         
-        # Save the session
         session.modified = True
         
         return redirect('/trackademic/timetable')
@@ -2266,7 +2114,7 @@ def complete_task():
         flash(f'Error completing task: {str(e)}', 'error')
         return redirect('/trackademic/timetable')
 
-# ============ HELPER FUNCTIONS FOR TRACKADEMIC ============
+# HELPER FUNCTIONS FOR TRACKADEMIC
 def get_today_schedule(user_id):
     """Get today's schedule based on current day of week for specific user"""
     today = datetime.datetime.today().weekday()
@@ -2306,7 +2154,7 @@ def get_weekly_summary(user_id):
     conn.close()
     return weekly_summary
 
-# ============ SOCIAL APP ROUTES ============
+# SOCIAL APP ROUTES
 @app.route('/social/dashboard', methods=['GET', 'POST'])
 def social_dashboard():
     """Social platform dashboard"""
@@ -2334,7 +2182,6 @@ def social_dashboard():
 
     db = get_social_db_connection()
     
-    # Get folders
     cursor = db.execute("""
         SELECT DISTINCT folders.id, folders.folder_name 
         FROM folders 
@@ -2343,7 +2190,6 @@ def social_dashboard():
     """, (user_id,))
     folders = cursor.fetchall()
 
-    # Get posts
     query = """
         SELECT 
             posts.id, posts.content, posts.filename, users.username, posts.user_id,
@@ -2361,7 +2207,6 @@ def social_dashboard():
     cursor = db.execute(query, params)
     posts = cursor.fetchall()
     
-    # Get comments for each post
     posts_with_comments = []
     for post in posts:
         cursor = db.execute(
@@ -2435,7 +2280,6 @@ def unsave(sp_id):
     user_id = session["user_id"]
     db = get_social_db_connection()
     
-    # Check if folder becomes empty after deletion
     cursor = db.execute("SELECT folder_id FROM saved_posts WHERE id=? AND user_id=?", (sp_id, user_id))
     result = cursor.fetchone()
     
@@ -2443,10 +2287,8 @@ def unsave(sp_id):
         folder_id = result[0]
         db.execute("DELETE FROM saved_posts WHERE id=? AND user_id=?", (sp_id, user_id))
         
-        # Check if any posts are still in this folder
         check = db.execute("SELECT COUNT(*) FROM saved_posts WHERE folder_id=?", (folder_id,)).fetchone()
         if check[0] == 0:
-            # Delete the folder if it's empty
             db.execute("DELETE FROM folders WHERE id=?", (folder_id,))
             
     db.commit()
@@ -2542,7 +2384,6 @@ def debug_user_gpa():
     user_id = session['user_id']
     conn = get_db_connection()
     
-    # Get current user's GPA data
     user_gpa = conn.execute('''
         SELECT g.*, u.username 
         FROM gpa g 
@@ -2551,7 +2392,6 @@ def debug_user_gpa():
         ORDER BY g.trimester
     ''', (user_id,)).fetchall()
     
-    # Get all GPA data for comparison
     all_gpa = conn.execute('''
         SELECT g.*, u.username 
         FROM gpa g 
