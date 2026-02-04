@@ -193,7 +193,7 @@
                         <div style="text-align: right;">
                             <div style="font-weight: bold;">GPA: {{ "%.2f"|format(semester.gpa) }}</div>
                             <small>Credits: {{ semester.total_credits }}</small><br>
-                            <small>Subjects: {{ semester.subjects|length }}</small>
+                            <small>Subjects: {{ (semester.total_credits / 3.5)|round|int if semester.total_credits else 0 }}</small>
                         </div>
                         <div style="margin-left: 10px;">
                             <form method="POST" action="/trackademic/calculator" style="display: inline;">
